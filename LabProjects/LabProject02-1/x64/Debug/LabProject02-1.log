@@ -1,0 +1,5 @@
+﻿  GameFramework.cpp
+  LabProject02-1.cpp
+  Scene.cpp
+C:\Users\82108\source\repos\LabProjects\LabProject02-1\LabProject02-1.cpp(78,1): warning C4715: 'wWinMain': 모든 제어 경로에서 값을 반환하지는 않습니다.
+  LabProject02-1.vcxproj -> C:\Users\82108\source\repos\LabProjects\x64\Debug\LabProject02-1.exe

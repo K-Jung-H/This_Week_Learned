@@ -1,3 +1,25 @@
+#숙제 4-1
+#숙제 5-39
+#숙제 15-3
+#숙제 15-4
+#숙제 15-19
+#숙제 15-20
+
+
+#숙제 4-24
+# import random
+
+# deck = [i for i in range(52)] #52장의 카드 숫자로 생성 0~51
+# numbers = ['A',2,3,4,5,6,7,8,9,10, 'J','Q','K'] # 13개 숫자 리스트
+# suits = ['스페이드', '다이아몬드', '하트', '클로버'] # 4개 무늬 리스트
+
+# random.shuffle(deck) # 셔플링
+
+# for i in deck:
+#     suit = i // 13 # 0,1,2,3
+#     number = i % 13 # 0,1,2,...,12
+#     print(suits[suit],numbers[number]) 
+
 #숙제 4-27
 # x, y = eval(input("x,y 좌표를 입력: "))
 
@@ -59,6 +81,35 @@
 # print(isPalindrome(123454321))
 # print(isPalindrome(12344322))
 
+#숙제 6-4
+###
+#def reverse(number):
+#    result = 0
+#    while number:
+#        rem = number % 10
+#        result = result * 10 +rem
+#        number //=10
+#    return result
+#
+#num = eval(input('정수를 입력하세요.: '))
+#
+#print(reverse(num))
+
+
+#숙제 6-5
+#def displaySortedNumbers(num1, num2, num3):
+#    result = sorted([num1,num2,num3])
+#    print('정렬된 숫자는 ')
+#    for n in result:
+#        print(n, end=' ')
+#    print('입니다.')
+#    return
+#
+#nums =input('세 개의 수를 입력하세요: ').split(',')
+#nList = [eval(n) for n in nums]
+#
+#displaySortedNumbers(nList[0], nList[1], nList[2])
+
 
 
 #숙제 6-12
@@ -84,19 +135,35 @@
 
 
 
+#숙제 15-18
+
+cnt = 0
+def main():
+    n = eval(input("디스크의 개수를 입력하세요: "))
+    #해결방법을 재귀적으로 찾는다.
+    print("옮기는 순서는 다음과 같습니다: ")
+    moveDisks(n, 'A', 'B', 'C')
+    print(cnt)
+    
+
+
+def moveDisks(n, fromTower, toTower, auxTower):
+    global cnt
+    cnt += 1
+    if n==1: #정지 조건
+        print("디스크", n, "을/를", fromTower, "에서", toTower, "로옮긴다.")
+    else:
+        moveDisks(n-1, fromTower, auxTower, toTower)
+        print("디스크", n, "을/를", fromTower, "에서", toTower, "로옮긴다.")
+        moveDisks(n-1, auxTower, toTower, fromTower)
+        
+
+main()
 
 
 
-#숙제 4-24
-# import random
 
-# deck = [i for i in range(52)] #52장의 카드 숫자로 생성 0~51
-# numbers = ['A',2,3,4,5,6,7,8,9,10, 'J','Q','K'] # 13개 숫자 리스트
-# suits = ['스페이드', '다이아몬드', '하트', '클로버'] # 4개 무늬 리스트
 
-# random.shuffle(deck) # 셔플링
 
-# for i in deck:
-#     suit = i // 13 # 0,1,2,3
-#     number = i % 13 # 0,1,2,...,12
-#     print(suits[suit],numbers[number]) 
+               
+
