@@ -9,8 +9,8 @@
 
 #pragma comment(lib, "dxguid.lib")
 
-#define FRAMEBUFFER_WIDTH 800
-#define FRAMEBUFFER_HEIGHT 600
+#define FRAME_BUFFER_WIDTH 800
+#define FRAME_BUFFER_HEIGHT 600
 #define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
 #include "targetver.h"

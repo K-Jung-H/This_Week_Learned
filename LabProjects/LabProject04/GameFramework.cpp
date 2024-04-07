@@ -27,8 +27,8 @@ CGameFramework::CGameFramework()
 	m_pd3dFence = NULL;
 	m_nFenceValue = 0;
 
-	m_nWndClientWidth = FRAMEBUFFER_WIDTH;
-	m_nWndClientHeight = FRAMEBUFFER_HEIGHT;
+	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
+	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
 
 	_tcscpy_s(m_pszFrameRate, _T("LapProject ("));
 }
