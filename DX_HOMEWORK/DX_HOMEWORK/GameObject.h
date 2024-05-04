@@ -36,6 +36,7 @@ public:
 
 	void SetPosition(float x, float y, float z);
 	void SetPosition(XMFLOAT3& xmf3Position);
+	void SetScale(const XMFLOAT3& xmf3Scale);
 
 	void SetMovingDirection(XMFLOAT3& xmf3MovingDirection) { m_xmf3MovingDirection = Vector3::Normalize(xmf3MovingDirection); }
 	void SetMovingSpeed(float fSpeed) { m_fMovingSpeed = fSpeed; }
@@ -78,10 +79,16 @@ public:
 	XMFLOAT3					m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	float						m_fRotationSpeed = 0.0f;
 
-	void SetRotationAxis(XMFLOAT3& xmf3RotationAxis) { m_xmf3RotationAxis = Vector3::Normalize(xmf3RotationAxis); }
+	void SetRotationAxis(XMFLOAT3& xmf3RotationAxis) 
+	{
+		m_xmf3RotationAxis = Vector3::Normalize(xmf3RotationAxis);
+	}
+
 	void SetRotationSpeed(float fSpeed) { m_fRotationSpeed = fSpeed; }
 
 	virtual void Animate(float fElapsedTime);
+
+	void Rotate_to_Player(float fElapsedTime, XMFLOAT3& xmf3LookTo);
 };
 
 class CExplosiveObject : public CRotatingObject
@@ -162,7 +169,7 @@ public:
 	virtual ~CStartObject();
 
 	bool						m_bBlowingUp = false;
-
+	bool						GameStartValue = false; // true가 되면 게임 시작
 	XMFLOAT4X4					m_pxmf4x4Transforms[EXPLOSION_DEBRISES];
 
 	float						m_fElapsedTimes = 0.0f;
@@ -178,4 +185,5 @@ public:
 	static XMFLOAT3				m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
 
 	static void PrepareExplosion();
+	bool Get_Start_Value();
 };

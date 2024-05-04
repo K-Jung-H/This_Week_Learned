@@ -40,6 +40,12 @@ void CGameObject::SetPosition(XMFLOAT3& xmf3Position)
 	m_xmf4x4World._42 = xmf3Position.y;
 	m_xmf4x4World._43 = xmf3Position.z;
 }
+void CGameObject::SetScale(const XMFLOAT3& xmf3Scale)
+{
+	m_xmf4x4World._11 = xmf3Scale.x;
+	m_xmf4x4World._22 = xmf3Scale.y;
+	m_xmf4x4World._33 = xmf3Scale.z;
+}
 
 XMFLOAT3 CGameObject::GetPosition()
 {
@@ -145,7 +151,8 @@ void CGameObject::UpdateBoundingBox()
 
 void CGameObject::Animate(float fElapsedTime)
 {
-	if (m_fMovingSpeed != 0.0f) Move(m_xmf3MovingDirection, m_fMovingSpeed * fElapsedTime);
+	if (m_fMovingSpeed != 0.0f) 
+		Move(m_xmf3MovingDirection, m_fMovingSpeed * fElapsedTime);
 
 	UpdateBoundingBox();
 }
@@ -195,6 +202,8 @@ int CGameObject::PickObjectByRayIntersection(XMVECTOR& xmvPickPosition, XMMATRIX
 //
 CRotatingObject::CRotatingObject()
 {
+	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(XMConvertToRadians(90.0f), 0.0f, 0.0f), m_xmf4x4World);
+
 }
 
 CRotatingObject::~CRotatingObject()
@@ -203,10 +212,55 @@ CRotatingObject::~CRotatingObject()
 
 void CRotatingObject::Animate(float fElapsedTime)
 {
-	if (m_fRotationSpeed != 0.0f) Rotate(m_xmf3RotationAxis, m_fRotationSpeed * fElapsedTime);
+	if (m_fRotationSpeed != 0.0f) 
+		Rotate(m_xmf3RotationAxis, m_fRotationSpeed * fElapsedTime);
 
 	CGameObject::Animate(fElapsedTime);
 }
+
+void CRotatingObject::Rotate_to_Player(float fElapsedTime, XMFLOAT3& xmf3LookTo)
+{
+	XMFLOAT3 temp(xmf3LookTo.x, GetPosition().y, xmf3LookTo.z);
+
+	LookAt(xmf3LookTo, GetLook());
+	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(XMConvertToRadians(90.0f), 0.0f, 0.0f), m_xmf4x4World);
+	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw( 0.0f, XMConvertToRadians(180.0f),0.0f), m_xmf4x4World);
+	CGameObject::Animate(fElapsedTime);
+}
+
+
+/*
+
+void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
+{
+	XMFLOAT4X4 mtxRotate = Matrix4x4::RotationYawPitchRoll(fPitch, fYaw, fRoll);
+	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
+}
+
+void CGameObject::Rotate(XMFLOAT3& xmf3RotationAxis, float fAngle)
+{
+	XMFLOAT4X4 mtxRotate = Matrix4x4::RotationAxis(xmf3RotationAxis, fAngle);
+	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
+}
+
+void CGameObject::LookTo(XMFLOAT3& xmf3LookTo, XMFLOAT3& xmf3Up)
+{
+	XMFLOAT4X4 xmf4x4View = Matrix4x4::LookToLH(GetPosition(), xmf3LookTo, xmf3Up);
+	m_xmf4x4World._11 = xmf4x4View._11; m_xmf4x4World._12 = xmf4x4View._21; m_xmf4x4World._13 = xmf4x4View._31;
+	m_xmf4x4World._21 = xmf4x4View._12; m_xmf4x4World._22 = xmf4x4View._22; m_xmf4x4World._23 = xmf4x4View._32;
+	m_xmf4x4World._31 = xmf4x4View._13; m_xmf4x4World._32 = xmf4x4View._23; m_xmf4x4World._33 = xmf4x4View._33;
+}
+
+void CGameObject::LookAt(XMFLOAT3& xmf3LookAt, XMFLOAT3& xmf3Up)
+{
+	XMFLOAT4X4 xmf4x4View = Matrix4x4::LookAtLH(GetPosition(), xmf3LookAt, xmf3Up);
+	m_xmf4x4World._11 = xmf4x4View._11; m_xmf4x4World._12 = xmf4x4View._21; m_xmf4x4World._13 = xmf4x4View._31;
+	m_xmf4x4World._21 = xmf4x4View._12; m_xmf4x4World._22 = xmf4x4View._22; m_xmf4x4World._23 = xmf4x4View._32;
+	m_xmf4x4World._31 = xmf4x4View._13; m_xmf4x4World._32 = xmf4x4View._23; m_xmf4x4World._33 = xmf4x4View._33;
+}
+
+*/
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -438,6 +492,8 @@ CMesh* CStartObject::m_pExplosionMesh = NULL;
 
 CStartObject::CStartObject()
 {
+	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(XMConvertToRadians(-90.0f),0.0f, 0.0f), m_xmf4x4World);
+	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(0.0f, XMConvertToRadians(180.0f), 0.0f), m_xmf4x4World);
 }
 
 CStartObject::~CStartObject()
@@ -473,6 +529,7 @@ void CStartObject::Animate(float fElapsedTime)
 			m_bBlowingUp = false;
 			m_fElapsedTimes = 0.0f;
 			SetColor(m_dwDefaultColor);
+			GameStartValue = true;
 		}
 	}
 	else
@@ -494,4 +551,9 @@ void CStartObject::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 	{
 		CGameObject::Render(hDCFrameBuffer, pCamera);
 	}
+}
+
+bool CStartObject::Get_Start_Value()
+{
+	return GameStartValue;
 }

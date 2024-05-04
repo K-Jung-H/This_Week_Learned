@@ -1,5 +1,5 @@
 #pragma once
-
+#include <vector>
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CVertex
@@ -7,6 +7,7 @@ class CVertex
 public:
 	CVertex() { m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); }
 	CVertex(float x, float y, float z) { m_xmf3Position = XMFLOAT3(x, y, z); }
+	CVertex(XMFLOAT3 v) : m_xmf3Position{ v } {};
 	~CVertex() { }
 
 	XMFLOAT3					m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -92,5 +93,14 @@ class CStartMesh : public CMesh
 public:
 	CStartMesh(float fWidth = 4.0f, float fHeight = 4.0f, float fDepth = 4.0f);
 	virtual ~CStartMesh() { }
-
 };
+
+
+class CSphereMesh : public CMesh
+{
+public:
+	CSphereMesh(float fWidth = 4.0f, float fHeight = 4.0f, float fDepth = 4.0f);
+	virtual ~CSphereMesh() { }
+};
+
+int Load_Object(const char* path, std::vector<std::pair<int, CPolygon*>>& pPolygon);

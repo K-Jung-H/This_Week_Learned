@@ -42,9 +42,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(255, 0, 0));
-	pExplosiveObject->SetPosition(-13.5f, 0.0f, -14.0f);
+	pExplosiveObject->SetPosition(10.0f, 10.0f, 30.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetRotationSpeed(90.0f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 	pExplosiveObject->SetMovingSpeed(10.5f);
 	m_ppObjects[0] = pExplosiveObject;
@@ -54,9 +54,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(0, 0, 255));
-	pExplosiveObject->SetPosition(+13.5f, 0.0f, -14.0f);
+	pExplosiveObject->SetPosition(10.0f, -10.0f, 30.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(180.0f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(-1.0f, 0.0f, 0.0f));
 	pExplosiveObject->SetMovingSpeed(8.8f);
 	m_ppObjects[1] = pExplosiveObject;
@@ -66,9 +66,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(0, 255, 0));
-	pExplosiveObject->SetPosition(0.0f, +5.0f, 20.0f);
+	pExplosiveObject->SetPosition(-10.0f, -10.0f, 30.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.15f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, -1.0f, 0.0f));
 	pExplosiveObject->SetMovingSpeed(5.2f);
 	m_ppObjects[2] = pExplosiveObject;
@@ -78,9 +78,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(0, 255, 255));
-	pExplosiveObject->SetPosition(0.0f, 0.0f, 0.0f);
+	pExplosiveObject->SetPosition(-10.0f, 10.0f, 30.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetRotationSpeed(40.6f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, 1.0f));
 	pExplosiveObject->SetMovingSpeed(20.4f);
 	m_ppObjects[3] = pExplosiveObject;
@@ -90,9 +90,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(128, 0, 255));
-	pExplosiveObject->SetPosition(10.0f, 0.0f, 0.0f);
+	pExplosiveObject->SetPosition(10.0f, 10.0f, 0.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(50.06f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 1.0f));
 	pExplosiveObject->SetMovingSpeed(6.4f);
 	m_ppObjects[4] = pExplosiveObject;
@@ -102,9 +102,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(255, 0, 255));
-	pExplosiveObject->SetPosition(-10.0f, 0.0f, -10.0f);
+	pExplosiveObject->SetPosition(10.0f, -10.0f, 0.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(60.06f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, 0.0f, 1.0f));
 	pExplosiveObject->SetMovingSpeed(8.9f);
 	m_ppObjects[5] = pExplosiveObject;
@@ -114,9 +114,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(255, 0, 255));
-	pExplosiveObject->SetPosition(-10.0f, 10.0f, -10.0f);
+	pExplosiveObject->SetPosition(-10.0f, -10.0f, 0.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(60.06f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, 1.0f, 1.0f));
 	pExplosiveObject->SetMovingSpeed(9.7f);
 	m_ppObjects[6] = pExplosiveObject;
@@ -126,9 +126,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(255, 0, 128));
-	pExplosiveObject->SetPosition(-10.0f, 10.0f, -20.0f);
+	pExplosiveObject->SetPosition(-10.0f, 10.0f, 0.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(70.06f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(-1.0f, 1.0f, 1.0f));
 	pExplosiveObject->SetMovingSpeed(15.6f);
 	m_ppObjects[7] = pExplosiveObject;
@@ -138,9 +138,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(128, 0, 255));
-	pExplosiveObject->SetPosition(-15.0f, 10.0f, -30.0f);
+	pExplosiveObject->SetPosition(-15.0f, 0.0f, -20.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(90.06f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, -1.0f));
 	pExplosiveObject->SetMovingSpeed(15.0f);
 	m_ppObjects[8] = pExplosiveObject;
@@ -150,9 +150,9 @@ void CScene::BuildObjects()
 	pExplosiveObject->SetMesh(pAirplaneMesh);
 
 	pExplosiveObject->SetColor(RGB(255, 64, 64));
-	pExplosiveObject->SetPosition(+15.0f, 10.0f, 0.0f);
+	pExplosiveObject->SetPosition(+15.0f, 0.0f, -20.0f);
 	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(90.06f);
+	pExplosiveObject->SetRotationSpeed(30.0f);
 	pExplosiveObject->SetMovingDirection(XMFLOAT3(-0.0f, 0.0f, -1.0f));
 	pExplosiveObject->SetMovingSpeed(15.0f);
 	m_ppObjects[9] = pExplosiveObject;
@@ -210,6 +210,12 @@ void CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				pExplosiveObject->m_bBlowingUp = true;
 			}
 			break;
+
+		case VK_TAB:
+			GameStart = true;
+			Start_Value = true;
+			break;
+
 		default:
 			break;
 		}
@@ -358,8 +364,23 @@ void CScene::Animate(float fElapsedTime)
 {
 	m_pWallsObject->Animate(fElapsedTime);
 
-	for (int i = 0; i < m_nObjects; i++) m_ppObjects[i]->Animate(fElapsedTime);
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		if (GameStart)
+		{
+			XMFLOAT3 Ppos = m_pPlayer->GetPosition();
+			m_ppObjects[i]->Animate(fElapsedTime);
+			static_cast<CRotatingObject*>(m_ppObjects[i])->Rotate_to_Player(fElapsedTime, Ppos);
+		}
+		else
+		{
+			m_ppObjects[i]->Animate(fElapsedTime);
 
+		}
+
+	}
+
+	
 	CheckPlayerByWallCollision();
 
 	CheckObjectByWallCollisions();
@@ -367,6 +388,12 @@ void CScene::Animate(float fElapsedTime)
 	CheckObjectByObjectCollisions();
 
 	CheckObjectByBulletCollisions();
+
+	if (!GameStart && !Start_Value)
+	{
+		CStartObject* startObject = static_cast<CStartObject*>(m_ppObjects[0]);
+		Start_Value = startObject->Get_Start_Value();
+	}
 }
 
 void CScene::Render(HDC hDCFrameBuffer, CCamera* pCamera)
@@ -378,6 +405,7 @@ void CScene::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 	for (int i = 0; i < m_nObjects; i++) m_ppObjects[i]->Render(hDCFrameBuffer, pCamera);
 
 	if (m_pPlayer) m_pPlayer->Render(hDCFrameBuffer, pCamera);
+
 
 //UI
 #ifdef _WITH_DRAW_AXIS
@@ -413,21 +441,33 @@ void CScene::ReadyObjects()
 	m_pWallsObject->m_xmOOBBPlayerMoveCheck = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth * 0.05f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 
 
-	CStartMesh* pStartMesh = new CStartMesh(40.0f, 20.0f, 4.0f);
-
+	//CStartMesh* pStartMesh = new CStartMesh(50.0f, 20.0f, 4.0f);
+	CSphereMesh* pStartMesh = new CSphereMesh(50.0f, 20.0f, 4.0f);
 	m_nObjects = 1;
 
 	m_ppObjects = new CGameObject * [m_nObjects];
-
+	 
 	CStartObject* pStartObject = new CStartObject();
+
 	pStartObject->SetMesh(pStartMesh);
 
 	pStartObject->SetColor(RGB(255, 0, 0));
-	pStartObject->SetPosition(-13.5f, 0.0f, -14.0f);
-	pStartObject->SetRotationAxis(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	pStartObject->SetPosition(0.0f, 0.0f, 25.0f);
+	pStartObject->SetRotationAxis(XMFLOAT3(0.0f, 00.0f, 0.0f));
 	pStartObject->SetRotationSpeed(0.0f);
 	pStartObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pStartObject->SetMovingSpeed(10.5f);
+	pStartObject->SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
 	m_ppObjects[0] = pStartObject;
 
 }
+
+/*
+* 
+* 		for (int i = 0; i < 3; ++i)
+		{
+			face->m_pVertices[i].m_xmf3Position.x * 100;
+			face->m_pVertices[i].m_xmf3Position.y * 100;
+			face->m_pVertices[i].m_xmf3Position.z * 100;
+		}
+*/

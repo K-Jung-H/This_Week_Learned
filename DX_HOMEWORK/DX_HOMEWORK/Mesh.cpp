@@ -2,6 +2,7 @@
 #include "Mesh.h"
 #include "GraphicsPipeline.h"
 
+using namespace std;
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CPolygon::CPolygon(int nVertices)
@@ -476,13 +477,13 @@ void CAxisMesh::Render(HDC hDCFrameBuffer)
 
 
 
-CStartMesh::CStartMesh(float fWidth, float fHeight, float fDepth) : CMesh(8)
+CStartMesh::CStartMesh(float fWidth, float fHeight, float fDepth) : CMesh(21)
 {
 	float fHalfWidth = fWidth * 0.5f;
 	float fHalfHeight = fHeight * 0.5f;
 	float fHalfDepth = fDepth * 0.5f;
 
-	CPolygon* pFrontFace = new CPolygon(4);
+	/*CPolygon* pFrontFace = new CPolygon(4);
 	pFrontFace->SetVertex(0, CVertex(-fHalfWidth , +fHalfHeight, -fHalfDepth));
 	pFrontFace->SetVertex(1, CVertex(+fHalfWidth , +fHalfHeight, -fHalfDepth));
 	pFrontFace->SetVertex(2, CVertex(+fHalfWidth , -fHalfHeight, -fHalfDepth));
@@ -522,58 +523,424 @@ CStartMesh::CStartMesh(float fWidth, float fHeight, float fDepth) : CMesh(8)
 	pRightFace->SetVertex(1, CVertex(+fHalfWidth, +fHalfHeight, +fHalfDepth));
 	pRightFace->SetVertex(2, CVertex(+fHalfWidth, -fHalfHeight, +fHalfDepth));
 	pRightFace->SetVertex(3, CVertex(+fHalfWidth, -fHalfHeight, -fHalfDepth));
-	SetPolygon(5, pRightFace);
+	SetPolygon(5, pRightFace);*/
 
 	//lattering
-
-	//CPolygon* pFace = new CPolygon(4);
-	//pFace->SetVertex(0, CVertex(+10.0f, +fHalfHeight, +fHalfDepth));
-	//pFace->SetVertex(1, CVertex(+10.0f, -fHalfHeight, +fHalfDepth));
-	//pFace->SetVertex(2, CVertex(+20.0f, -fHalfHeight, +fHalfDepth));
-	//pFace->SetVertex(3, CVertex(+20.0f, +fHalfHeight, +fHalfDepth));
-	//SetPolygon(6, pFace);
-
 	CPolygon* pFace = new CPolygon(18); // S의 앞면
-	pFace->SetVertex(0, CVertex(+20.0f, +7.5f, +fHalfDepth));
-	pFace->SetVertex(1, CVertex(+17.5f, +10.0f, +fHalfDepth));
-	pFace->SetVertex(2, CVertex(+12.5f, +10.0f, +fHalfDepth));
-	pFace->SetVertex(3, CVertex(+10.0f, +7.5f, +fHalfDepth));
-	pFace->SetVertex(4, CVertex(+10.0f, +5.0f, +fHalfDepth));
-	pFace->SetVertex(5, CVertex(+12.5f, +7.5f, +fHalfDepth));
-	pFace->SetVertex(6, CVertex(+17.5f, +7.5f, +fHalfDepth));
-	pFace->SetVertex(7, CVertex(+18.25f,+6.25f, +fHalfDepth));
-	pFace->SetVertex(8, CVertex(+10.0f, -5.0f, +fHalfDepth));
-	pFace->SetVertex(9, CVertex(+10.0f, -7.5f, +fHalfDepth));
-	pFace->SetVertex(10, CVertex(+12.5f, -10.0f, +fHalfDepth));
-	pFace->SetVertex(11, CVertex(+17.5f, -10.0f, +fHalfDepth));
-	pFace->SetVertex(12, CVertex(+20.0f, -7.5f, +fHalfDepth));
-	pFace->SetVertex(13, CVertex(+20.0f, -5.0f, +fHalfDepth));
-	pFace->SetVertex(14, CVertex(+17.5f, -7.5f, +fHalfDepth));
-	pFace->SetVertex(15, CVertex(+12.5f, -7.0f, +fHalfDepth));
-	pFace->SetVertex(16, CVertex(+13.25f,-6.25f, +fHalfDepth));
-	pFace->SetVertex(17, CVertex(+20.0f, +5.0f, +fHalfDepth));
-	SetPolygon(6, pFace);
+	pFace->SetVertex(0, CVertex(+25.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(+22.5f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(+17.5f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(+15.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(+15.0f, +5.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(+17.5f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(6, CVertex(+22.5f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(7, CVertex(+23.25f,+6.25f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(+15.0f, -5.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(+15.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(10, CVertex(+17.5f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(11, CVertex(+22.5f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(12, CVertex(+25.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(13, CVertex(+25.0f, -5.0f, +fHalfDepth));
+	pFace->SetVertex(14, CVertex(+22.5f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(15, CVertex(+17.5f, -7.0f, +fHalfDepth));
+	pFace->SetVertex(16, CVertex(+18.25f,-6.25f, +fHalfDepth));
+	pFace->SetVertex(17, CVertex(+25.0f, +5.0f, +fHalfDepth));
+	SetPolygon(0, pFace);
 
 	pFace = new CPolygon(18); // S의 뒷면
-	pFace->SetVertex(0, CVertex(+20.0f, +7.5f, -fHalfDepth));
-	pFace->SetVertex(1, CVertex(+17.5f, +10.0f, -fHalfDepth));
-	pFace->SetVertex(2, CVertex(+12.5f, +10.0f, -fHalfDepth));
-	pFace->SetVertex(3, CVertex(+10.0f, +7.5f, -fHalfDepth));
-	pFace->SetVertex(4, CVertex(+10.0f, +5.0f, -fHalfDepth));
-	pFace->SetVertex(5, CVertex(+12.5f, +7.5f, -fHalfDepth));
-	pFace->SetVertex(6, CVertex(+17.5f, +7.5f, -fHalfDepth));
-	pFace->SetVertex(7, CVertex(+18.25f, +6.25f, -fHalfDepth));
-	pFace->SetVertex(8, CVertex(+10.0f, -5.0f, -fHalfDepth));
-	pFace->SetVertex(9, CVertex(+10.0f, -7.5f, -fHalfDepth));
-	pFace->SetVertex(10, CVertex(+12.5f, -10.0f, -fHalfDepth));
-	pFace->SetVertex(11, CVertex(+17.5f, -10.0f, -fHalfDepth));
-	pFace->SetVertex(12, CVertex(+20.0f, -7.5f, -fHalfDepth));
-	pFace->SetVertex(13, CVertex(+20.0f, -5.0f, -fHalfDepth));
-	pFace->SetVertex(14, CVertex(+17.5f, -7.5f, -fHalfDepth));
-	pFace->SetVertex(15, CVertex(+12.5f, -7.0f, -fHalfDepth));
-	pFace->SetVertex(16, CVertex(+13.25f, -6.25f, -fHalfDepth));
-	pFace->SetVertex(17, CVertex(+20.0f, +5.0f, -fHalfDepth));
+	pFace->SetVertex(0, CVertex(+25.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(+22.5f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(+17.5f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(+15.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(4, CVertex(+15.0f, +5.0f, -fHalfDepth));
+	pFace->SetVertex(5, CVertex(+17.5f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(+22.5f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(+23.25f, +6.25f, -fHalfDepth));
+	pFace->SetVertex(8, CVertex(+15.0f, -5.0f, -fHalfDepth));
+	pFace->SetVertex(9, CVertex(+15.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(+17.5f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(11, CVertex(+22.5f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(12, CVertex(+25.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(13, CVertex(+25.0f, -5.0f, -fHalfDepth));
+	pFace->SetVertex(14, CVertex(+22.5f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(15, CVertex(+17.5f, -7.0f, -fHalfDepth));
+	pFace->SetVertex(16, CVertex(+18.25f, -6.25f, -fHalfDepth));
+	pFace->SetVertex(17, CVertex(+25.0f, +5.0f, -fHalfDepth));
+	SetPolygon(1, pFace);
+
+	pFace = new CPolygon(36); // S의 옆면
+	pFace->SetVertex(0, CVertex(+25.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(+25.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(+22.5f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(+22.5f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(+17.5f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(+17.5f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(+15.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(+15.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(+15.0f, +5.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(+15.0f, +5.0f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(+17.5f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(11, CVertex(+17.5f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(12, CVertex(+22.5f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(13, CVertex(+22.5f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(14, CVertex(+23.25f, +6.25f, -fHalfDepth));
+	pFace->SetVertex(15, CVertex(+23.25f, +6.25f, +fHalfDepth));
+	pFace->SetVertex(16, CVertex(+15.0f, -5.0f, +fHalfDepth));
+	pFace->SetVertex(17, CVertex(+15.0f, -5.0f, -fHalfDepth));
+	pFace->SetVertex(18, CVertex(+15.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(19, CVertex(+15.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(20, CVertex(+17.5f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(21, CVertex(+17.5f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(22, CVertex(+22.5f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(23, CVertex(+22.5f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(24, CVertex(+25.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(25, CVertex(+25.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(26, CVertex(+25.0f, -5.0f, -fHalfDepth));
+	pFace->SetVertex(27, CVertex(+25.0f, -5.0f, +fHalfDepth));
+	pFace->SetVertex(28, CVertex(+22.5f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(29, CVertex(+22.5f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(30, CVertex(+17.5f, -7.0f, -fHalfDepth));
+	pFace->SetVertex(31, CVertex(+17.5f, -7.0f, +fHalfDepth));
+	pFace->SetVertex(32, CVertex(+18.25f, -6.25f, +fHalfDepth));
+	pFace->SetVertex(33, CVertex(+18.25f, -6.25f, -fHalfDepth));
+	pFace->SetVertex(34, CVertex(+25.0f, +5.0f, -fHalfDepth));
+	pFace->SetVertex(35, CVertex(+25.0f, +5.0f, +fHalfDepth));
+	SetPolygon(2, pFace);
+
+
+
+
+//==============================================================
+	pFace = new CPolygon(9); // T의 앞면
+	pFace->SetVertex(0, CVertex(+15.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(+5.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(+7.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(+9.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(+9.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(+10.0f,-10.0f, +fHalfDepth));
+	pFace->SetVertex(6, CVertex(+11.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(7, CVertex(+11.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(+13.0f, +7.5f, +fHalfDepth));
+	SetPolygon(3, pFace);
+
+	pFace = new CPolygon(9); // T의 뒷면
+	pFace->SetVertex(0, CVertex(+15.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(+5.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(+7.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(+9.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(4, CVertex(+9.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(5, CVertex(+10.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(+11.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(+11.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(8, CVertex(+13.0f, +7.5f, -fHalfDepth));
+	SetPolygon(4, pFace);
+
+	pFace = new CPolygon(19); // T의 옆면
+	pFace->SetVertex(0, CVertex(+15.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(+15.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(+5.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(+5.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(+7.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(+7.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(+9.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(+9.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(+9.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(+9.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(+10.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(11, CVertex(+10.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(12, CVertex(+11.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(13, CVertex(+11.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(14, CVertex(+11.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(15, CVertex(+11.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(16, CVertex(+13.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(17, CVertex(+13.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(18, CVertex(+15.0f, +10.0f, -fHalfDepth));
+	SetPolygon(5, pFace);
+
+//==============================================================
+
+
+	pFace = new CPolygon(10); // A의 앞면
+	pFace->SetVertex(0, CVertex(+1.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-1.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(-5.0f, -8.0f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(-5.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-3.75f,-10.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-1.5f, -3.0f, +fHalfDepth));
+	pFace->SetVertex(6, CVertex(+1.5f, -3.0f, +fHalfDepth));
+	pFace->SetVertex(7, CVertex(+3.75f,-10.0f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(+5.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(+5.0f, -8.0f, +fHalfDepth));
+	SetPolygon(6, pFace);
+
+	pFace = new CPolygon(10); // A의 뒷면
+	pFace->SetVertex(0, CVertex(+1.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(-1.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-5.0f, -8.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-5.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(4, CVertex(-3.75f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(5, CVertex(-1.5f, -3.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(+1.5f, -3.0f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(+3.75f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(8, CVertex(+5.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(9, CVertex(+5.0f, -8.0f, -fHalfDepth));
 	SetPolygon(7, pFace);
 
+	pFace = new CPolygon(20); // A의 옆면
+	pFace->SetVertex(0, CVertex(+1.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(+1.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-1.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-1.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-5.0f, -8.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-5.0f, -8.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(-5.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(-5.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(-3.75f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(-3.75f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(-1.5f, -3.0f, -fHalfDepth));
+	pFace->SetVertex(11, CVertex(-1.5f, -3.0f, +fHalfDepth));
+	pFace->SetVertex(12, CVertex(+1.5f, -3.0f, +fHalfDepth));
+	pFace->SetVertex(13, CVertex(+1.5f, -3.0f, -fHalfDepth));
+	pFace->SetVertex(14, CVertex(+3.75f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(15, CVertex(+3.75f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(16, CVertex(+5.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(17, CVertex(+5.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(18, CVertex(+5.0f, -8.0f, -fHalfDepth));
+	pFace->SetVertex(19, CVertex(+5.0f, -8.0f, +fHalfDepth));
+	SetPolygon(8, pFace);
+
+
+	pFace = new CPolygon(4); // A앞면 내부
+	pFace->SetVertex(0, CVertex(+0.5f, +7.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-0.5f, +7.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(-2.0f, -1.0f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(+2.0f, -1.0f, +fHalfDepth));
+	SetPolygon(9, pFace);
+
+	pFace = new CPolygon(4); // A뒷면 내부
+	pFace->SetVertex(0, CVertex(+0.5f, +7.0f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(-0.5f, +7.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-2.0f, -1.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(+2.0f, -1.0f, -fHalfDepth));
+	SetPolygon(10, pFace);
+
+
+	pFace = new CPolygon(8); // A면 내부
+	pFace->SetVertex(0, CVertex(+0.5f, +7.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(+0.5f, +7.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-0.5f, +7.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-0.5f, +7.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-2.0f, -1.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-2.0f, -1.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(+2.0f, -1.0f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(+2.0f, -1.0f, +fHalfDepth));
+
+	SetPolygon(11, pFace);
+
+
+//==============================================================
+
+
+	pFace = new CPolygon(10); // R앞면
+	pFace->SetVertex(0, CVertex(-5.5f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-12.0f,+10.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(-14.0f, +6.0f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(-11.5f, +2.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-15.0f, -6.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-15.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(6, CVertex(-10.0f, +1.0f, +fHalfDepth));
+	pFace->SetVertex(7, CVertex(-7.0f, -1.0f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(-7.0f, -6.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(-5.5f, -10.0f, +fHalfDepth));
+	SetPolygon(12, pFace);
+
+	pFace = new CPolygon(10); // R뒷면
+	pFace->SetVertex(0, CVertex(-5.5f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(-12.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-14.0f, +6.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-11.5f, +2.0f, -fHalfDepth));
+	pFace->SetVertex(4, CVertex(-15.0f, -6.0f, -fHalfDepth));
+	pFace->SetVertex(5, CVertex(-15.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(-10.0f, +1.0f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(-7.0f, -1.0f, -fHalfDepth));
+	pFace->SetVertex(8, CVertex(-7.0f, -6.0f, -fHalfDepth));
+	pFace->SetVertex(9, CVertex(-5.5f, -10.0f, -fHalfDepth));
+	SetPolygon(13, pFace);
+
+	pFace = new CPolygon(20); // R옆면
+	pFace->SetVertex(0, CVertex(-5.5f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-5.5f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-12.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-12.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-14.0f, +6.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-14.0f, +6.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(-11.5f, +2.0f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(-11.5f, +2.0f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(-15.0f, -6.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(-15.0f, -6.0f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(-15.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(11, CVertex(-15.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(12, CVertex(-10.0f, +1.0f, +fHalfDepth));
+	pFace->SetVertex(13, CVertex(-10.0f, +1.0f, -fHalfDepth));
+	pFace->SetVertex(14, CVertex(-7.0f, -1.0f, -fHalfDepth));
+	pFace->SetVertex(15, CVertex(-7.0f, -1.0f, +fHalfDepth));
+	pFace->SetVertex(16, CVertex(-7.0f, -6.0f, +fHalfDepth));
+	pFace->SetVertex(17, CVertex(-7.0f, -6.0f, -fHalfDepth));
+	pFace->SetVertex(18, CVertex(-5.5f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(19, CVertex(-5.5f, -10.0f, +fHalfDepth));
+	SetPolygon(14, pFace);
+
+	pFace = new CPolygon(5); // R앞면 내부
+	pFace->SetVertex(0, CVertex(-6.5f, +8.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-11.0f, +8.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(-12.0f, +6.0f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(-11.0f, +3.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-6.5f, +3.0f, +fHalfDepth));
+	SetPolygon(15, pFace);
+
+	pFace = new CPolygon(5); // R뒷면 내부
+	pFace->SetVertex(0, CVertex(-6.5f, +8.0f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(-11.0f, +8.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-12.0f, +6.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-11.0f, +3.0f, -fHalfDepth));
+	pFace->SetVertex(4, CVertex(-6.5f, +3.0f, -fHalfDepth));
+	SetPolygon(16, pFace);
+
+	pFace = new CPolygon(11); // R옆면 내부
+	pFace->SetVertex(0, CVertex(-6.5f, +8.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-6.5f, +8.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-11.0f, +8.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-11.0f, +8.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-12.0f, +6.0f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-12.0f, +6.0f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(-11.0f, +3.0f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(-11.0f, +3.0f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(-6.5f, +3.0f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(-6.5f, +3.0f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(-6.5f, +8.0f, -fHalfDepth));
+	SetPolygon(17, pFace);
+
+//==============================================================
+
+	pFace = new CPolygon(9); // T의 앞면
+	pFace->SetVertex(0, CVertex(-15.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-25.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(2, CVertex(-23.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(3, CVertex(-21.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-21.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-20.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(6, CVertex(-19.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(7, CVertex(-19.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(-17.0f, +7.5f, +fHalfDepth));
+	SetPolygon(18, pFace);
+
+	pFace = new CPolygon(9); // T의 back면
+	pFace->SetVertex(0, CVertex(-15.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(1, CVertex(-25.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-23.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-21.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(4, CVertex(-21.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(5, CVertex(-20.0f, -10.0f,-+fHalfDepth));
+	pFace->SetVertex(6, CVertex(-19.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(-19.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(8, CVertex(-17.0f, +7.5f, -fHalfDepth));
+	SetPolygon(19, pFace);
+
+	pFace = new CPolygon(19); // T의 side면
+	pFace->SetVertex(0, CVertex(-15.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(1, CVertex(-15.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(2, CVertex(-25.0f, +10.0f, -fHalfDepth));
+	pFace->SetVertex(3, CVertex(-25.0f, +10.0f, +fHalfDepth));
+	pFace->SetVertex(4, CVertex(-23.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(5, CVertex(-23.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(6, CVertex(-21.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(7, CVertex(-21.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(8, CVertex(-21.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(9, CVertex(-21.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(10, CVertex(-20.0f, -10.0f, -fHalfDepth));
+	pFace->SetVertex(11, CVertex(-20.0f, -10.0f, +fHalfDepth));
+	pFace->SetVertex(12, CVertex(-19.0f, -7.5f, +fHalfDepth));
+	pFace->SetVertex(13, CVertex(-19.0f, -7.5f, -fHalfDepth));
+	pFace->SetVertex(14, CVertex(-19.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(15, CVertex(-19.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(16, CVertex(-17.0f, +7.5f, +fHalfDepth));
+	pFace->SetVertex(17, CVertex(-17.0f, +7.5f, -fHalfDepth));
+	pFace->SetVertex(18, CVertex(-15.0f, +10.0f, -fHalfDepth));
+	SetPolygon(20, pFace);
+
 	m_xmOOBB = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+
+CSphereMesh::CSphereMesh(float fWidth, float fHeight, float fDepth)
+{
+	float fHalfWidth = fWidth * 0.5f;
+	float fHalfHeight = fHeight * 0.5f;
+	float fHalfDepth = fDepth * 0.5f;
+
+
+	vector<pair<int, CPolygon*>> obj_data;
+	int f_num = Load_Object("objfile\\sphere.obj", obj_data);
+
+	m_nPolygons = f_num;
+	m_ppPolygons = new CPolygon * [f_num];
+
+	for (pair<int, CPolygon*>& f_data : obj_data)
+	{
+		int face_num = f_data.first;
+		CPolygon* face = f_data.second;
+		SetPolygon(face_num, face);
+	}
+
+	m_xmOOBB = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+
+}
+
+// obj 파일을 읽어들이는 함수
+int Load_Object(const char* path, vector<pair<int, CPolygon*>>& pPolygon)
+{
+	vector<XMFLOAT3> vertices;
+	vertices.clear();
+
+	ifstream in(path);
+	if (!in) {
+		cerr << path << "파일 못찾음";
+		cout << "오류오류";
+		exit(1);
+	}
+
+	int n_faces = 0;
+
+	while (in)
+	{
+		string lineHeader;
+		in >> lineHeader;
+		if (lineHeader == "v")
+		{
+			XMFLOAT3 vertex{};
+			in >> vertex.x >> vertex.y >> vertex.z;
+			vertices.push_back(vertex);
+		}
+		else if (lineHeader == "f")
+		{
+			char a{};
+			unsigned int vertexIndex[3];
+
+			for (int i = 0; i < 3; ++i)
+			{
+				char separator{};
+				int temp{};
+				in >> vertexIndex[i] >> separator >> temp >> separator >> temp;
+			}
+			CPolygon* poly = new CPolygon(3);
+			for (int i = 0; i < 3; ++i)
+			{
+				poly->SetVertex(i, CVertex(vertices[vertexIndex[i] - 1]));
+			}
+
+			pPolygon.push_back(make_pair(n_faces++, poly));
+		}
+	}
+
+	return pPolygon.size();
 }

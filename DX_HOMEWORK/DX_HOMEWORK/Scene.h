@@ -9,13 +9,13 @@ class CScene
 public:
 	CScene(CPlayer *pPlayer);
 	virtual ~CScene();
-
+	bool GameStart = false;
+	bool Start_Value = false;
 private:
 	int							m_nObjects = 0;
 	CGameObject					**m_ppObjects = NULL;
 
 	CWallsObject*				m_pWallsObject = NULL;
-
 	CPlayer*					m_pPlayer = NULL;
 
 #ifdef _WITH_DRAW_AXIS
@@ -40,4 +40,7 @@ public:
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	CGameObject* PickObjectPointedByCursor(int xClient, int yClient, CCamera* pCamera);
+
+
+	XMFLOAT3 Get_Player_Pos();
 };

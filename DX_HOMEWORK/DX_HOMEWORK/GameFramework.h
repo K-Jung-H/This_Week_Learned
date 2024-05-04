@@ -42,6 +42,7 @@ public:
 
 	void BuildObjects();
 	void ReleaseObjects();
+	void Change_Scene();
 
 	void ProcessInput();
 	void AnimateObjects();

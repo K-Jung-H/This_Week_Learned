@@ -75,7 +75,7 @@ void CGameFramework::BuildObjects()
 	CAirplaneMesh* pAirplaneMesh = new CAirplaneMesh(6.0f, 6.0f, 1.0f);
 
 	m_pPlayer = new CAirplanePlayer();
-	m_pPlayer->SetPosition(0.0f, 0.0f, 0.0f);
+	m_pPlayer->SetPosition(0.0f, 0.0f, -30.0f);
 	m_pPlayer->SetMesh(pAirplaneMesh);
 	m_pPlayer->SetColor(RGB(0, 0, 255));
 	m_pPlayer->SetCamera(pCamera);
@@ -83,7 +83,7 @@ void CGameFramework::BuildObjects()
 
 	m_pScene = new CScene(m_pPlayer);
 	m_pScene->ReadyObjects();
-//	m_pScene->BuildObjects();
+//	m_pScene->BuildObjects(); 
 }
 
 void CGameFramework::ReleaseObjects()
@@ -96,6 +96,22 @@ void CGameFramework::ReleaseObjects()
 
 	if (m_pPlayer) delete m_pPlayer;
 }
+
+void CGameFramework::Change_Scene() // 씬 변경에서 게임 시작하게 만들기
+{
+	if (m_pScene)
+	{
+		m_pScene->ReleaseObjects();
+		delete m_pScene;
+
+		m_pScene->GameStart = true;
+
+		m_pScene = NULL;
+		m_pScene = new CScene(m_pPlayer);
+		m_pScene->BuildObjects();
+	}		
+}
+
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
@@ -141,6 +157,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case VK_CONTROL:
 			((CAirplanePlayer*)m_pPlayer)->FireBullet(m_pLockedObject);
 			m_pLockedObject = NULL;
+			break;
+		case VK_TAB:
 			break;
 		default:
 			m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
@@ -222,6 +240,12 @@ void CGameFramework::AnimateObjects()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	if (m_pScene) m_pScene->Animate(fTimeElapsed);
+
+	if (m_pScene->Start_Value && !m_pScene->GameStart)
+	{
+		Change_Scene();
+		m_pScene->GameStart = true;
+	}
 }
 
 void CGameFramework::FrameAdvance()
@@ -239,7 +263,7 @@ void CGameFramework::FrameAdvance()
 
 	PresentFrameBuffer();
 
-	m_GameTimer.GetFrameRate(m_pszFrameRate + 12, 37);
+	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 

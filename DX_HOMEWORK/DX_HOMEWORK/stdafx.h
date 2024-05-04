@@ -15,6 +15,10 @@
 #include <memory.h>
 #include <tchar.h>
 #include <math.h>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <vector>
 
 #include <Mmsystem.h>
 #pragma comment(lib, "winmm.lib")
