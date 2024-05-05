@@ -143,6 +143,15 @@ CAirplanePlayer::CAirplanePlayer()
 		m_ppBullets[i]->SetMovingSpeed(120.0f);
 		m_ppBullets[i]->SetActive(false);
 	}
+
+	m_pBarrier = new CBarrierObject;
+	CSphereMesh* pBarrierMesh = new CSphereMesh(5.0f, 5.0f, 5.0f);
+	m_pBarrier->SetMesh(pBarrierMesh);
+	m_pBarrier->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	m_pBarrier->SetRotationSpeed(360.0f);
+	m_pBarrier->SetMovingSpeed(100.0f);
+	m_pBarrier->SetActive(false);
+
 }
 
 CAirplanePlayer::~CAirplanePlayer()
@@ -158,6 +167,13 @@ void CAirplanePlayer::Animate(float fElapsedTime)
 	{
 		if (m_ppBullets[i]->m_bActive) m_ppBullets[i]->Animate(fElapsedTime);
 	}
+
+	if (m_pBarrier->m_bActive)
+	{
+		//m_pBarrier->SetPosition(getPosition());
+		m_pBarrier->Animate(fElapsedTime);
+	}
+
 }
 
 void CAirplanePlayer::OnUpdateTransform()
@@ -172,6 +188,11 @@ void CAirplanePlayer::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 	CPlayer::Render(hDCFrameBuffer, pCamera);
 
 	for (int i = 0; i < BULLETS; i++) if (m_ppBullets[i]->m_bActive) m_ppBullets[i]->Render(hDCFrameBuffer, pCamera);
+	
+	if (m_pBarrier->m_bActive)
+	{
+		m_pBarrier->Render(hDCFrameBuffer, GetPosition(), pCamera);
+	}
 }
 
 void CAirplanePlayer::FireBullet(CGameObject* pLockedObject)

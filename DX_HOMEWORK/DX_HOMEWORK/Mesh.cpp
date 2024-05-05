@@ -910,7 +910,9 @@ int Load_Object(const char* path, vector<pair<int, CPolygon*>>& pPolygon)
 	}
 
 	int n_faces = 0;
-
+	float Middle_x{};
+	float Middle_y{};
+	float Middle_z{};
 	while (in)
 	{
 		string lineHeader;
@@ -919,6 +921,9 @@ int Load_Object(const char* path, vector<pair<int, CPolygon*>>& pPolygon)
 		{
 			XMFLOAT3 vertex{};
 			in >> vertex.x >> vertex.y >> vertex.z;
+			Middle_x += vertex.x;
+			Middle_y += vertex.y;
+			Middle_z += vertex.z;
 			vertices.push_back(vertex);
 		}
 		else if (lineHeader == "f")
@@ -942,5 +947,9 @@ int Load_Object(const char* path, vector<pair<int, CPolygon*>>& pPolygon)
 		}
 	}
 
+	float mx = Middle_x / pPolygon.size();
+	float my = Middle_y / pPolygon.size();
+	float mz = Middle_z / pPolygon.size();
+	cout << mx << my << mz;
 	return pPolygon.size();
 }

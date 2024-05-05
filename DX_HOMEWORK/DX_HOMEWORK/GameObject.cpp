@@ -42,9 +42,9 @@ void CGameObject::SetPosition(XMFLOAT3& xmf3Position)
 }
 void CGameObject::SetScale(const XMFLOAT3& xmf3Scale)
 {
-	m_xmf4x4World._11 = xmf3Scale.x;
-	m_xmf4x4World._22 = xmf3Scale.y;
-	m_xmf4x4World._33 = xmf3Scale.z;
+	m_xmf4x4World._11 *= xmf3Scale.x;
+	m_xmf4x4World._22 *= xmf3Scale.y;
+	m_xmf4x4World._33 *= xmf3Scale.z;
 }
 
 XMFLOAT3 CGameObject::GetPosition()
@@ -494,6 +494,7 @@ CStartObject::CStartObject()
 {
 	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(XMConvertToRadians(-90.0f),0.0f, 0.0f), m_xmf4x4World);
 	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(0.0f, XMConvertToRadians(180.0f), 0.0f), m_xmf4x4World);
+
 }
 
 CStartObject::~CStartObject()
@@ -557,3 +558,82 @@ bool CStartObject::Get_Start_Value()
 {
 	return GameStartValue;
 }
+
+
+
+XMFLOAT3 CBarrierObject::m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
+CMesh* CBarrierObject::m_pExplosionMesh = NULL;
+
+CBarrierObject::CBarrierObject()
+{
+	m_xmf4x4World = Matrix4x4::Identity();
+
+}
+
+CBarrierObject::~CBarrierObject()
+{
+}
+
+void CBarrierObject::PrepareExplosion()
+{
+	for (int i = 0; i < EXPLOSION_DEBRISES; i++) XMStoreFloat3(&m_pxmf3SphereVectors[i], ::RandomUnitVectorOnSphere());
+
+	m_pExplosionMesh = new CCubeMesh(0.5f, 0.5f, 0.5f);
+}
+
+void CBarrierObject::Animate(float fElapsedTime)
+{
+	if (m_bBlowingUp)
+	{
+		m_fElapsedTimes += fElapsedTime;
+		if (m_fElapsedTimes <= m_fDuration)
+		{
+			XMFLOAT3 xmf3Position = GetPosition();
+			for (int i = 0; i < EXPLOSION_DEBRISES; i++)
+			{
+				m_pxmf4x4Transforms[i] = Matrix4x4::Identity();
+				m_pxmf4x4Transforms[i]._41 = xmf3Position.x + m_pxmf3SphereVectors[i].x * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._42 = xmf3Position.y + m_pxmf3SphereVectors[i].y * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._43 = xmf3Position.z + m_pxmf3SphereVectors[i].z * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i] = Matrix4x4::Multiply(Matrix4x4::RotationAxis(m_pxmf3SphereVectors[i], m_fExplosionRotation * m_fElapsedTimes), m_pxmf4x4Transforms[i]);
+			}
+		}
+		else
+		{
+			m_bBlowingUp = false;
+			m_fElapsedTimes = 0.0f;
+			SetColor(m_dwDefaultColor);
+		}
+	}
+	else
+	{
+		// 원인 찾기 , 왜 공전하는지 이유를 찾아야 함
+		//XMFLOAT3 temp = GetPosition();
+
+		//SetPosition(temp.x, temp.y, temp.z);
+		CRotatingObject::Animate(fElapsedTime);
+
+
+	}
+}
+
+void CBarrierObject::Render(HDC hDCFrameBuffer, XMFLOAT3& p_pos ,CCamera* pCamera)
+{
+	if (m_bBlowingUp)
+	{
+		for (int i = 0; i < EXPLOSION_DEBRISES; i++)
+		{
+			CGameObject::Render(hDCFrameBuffer, &m_pxmf4x4Transforms[i], m_pExplosionMesh);
+		}
+	}
+	else
+	{
+		//SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
+		XMFLOAT3 barrier_pos = p_pos;
+
+		SetPosition(barrier_pos.x, barrier_pos.y, barrier_pos.z);
+
+		CGameObject::Render(hDCFrameBuffer, pCamera);
+	}
+}
+

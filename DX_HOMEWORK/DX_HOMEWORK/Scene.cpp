@@ -30,7 +30,6 @@ void CScene::BuildObjects()
 	m_pWallsObject->m_pxmf4WallPlanes[5] = XMFLOAT4(0.0f, 0.0f, -1.0f, fHalfDepth);
 	m_pWallsObject->m_xmOOBBPlayerMoveCheck = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth * 0.05f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 
-	//CCubeMesh* pCubeMesh = new CCubeMesh(4.0f, 4.0f, 4.0f);
 	CAirplaneMesh* pAirplaneMesh = new CAirplaneMesh();
 
 
@@ -441,8 +440,7 @@ void CScene::ReadyObjects()
 	m_pWallsObject->m_xmOOBBPlayerMoveCheck = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth * 0.05f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 
 
-	//CStartMesh* pStartMesh = new CStartMesh(50.0f, 20.0f, 4.0f);
-	CSphereMesh* pStartMesh = new CSphereMesh(50.0f, 20.0f, 4.0f);
+	CStartMesh* pStartMesh = new CStartMesh(50.0f, 20.0f, 4.0f);
 	m_nObjects = 1;
 
 	m_ppObjects = new CGameObject * [m_nObjects];
@@ -453,18 +451,18 @@ void CScene::ReadyObjects()
 
 	pStartObject->SetColor(RGB(255, 0, 0));
 	pStartObject->SetPosition(0.0f, 0.0f, 25.0f);
-	pStartObject->SetRotationAxis(XMFLOAT3(0.0f, 00.0f, 0.0f));
+	pStartObject->SetRotationAxis(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pStartObject->SetRotationSpeed(0.0f);
 	pStartObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pStartObject->SetMovingSpeed(10.5f);
-	pStartObject->SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
+
 	m_ppObjects[0] = pStartObject;
+
 
 }
 
 /*
-* 
-* 		for (int i = 0; i < 3; ++i)
+ 		for (int i = 0; i < 3; ++i)
 		{
 			face->m_pVertices[i].m_xmf3Position.x * 100;
 			face->m_pVertices[i].m_xmf3Position.y * 100;

@@ -187,3 +187,33 @@ public:
 	static void PrepareExplosion();
 	bool Get_Start_Value();
 };
+
+
+
+class CBarrierObject : public CRotatingObject
+{
+public:
+	CBarrierObject();
+	virtual ~CBarrierObject();
+
+	bool						m_bBlowingUp = false;
+	XMFLOAT4X4					m_pxmf4x4Transforms[EXPLOSION_DEBRISES];
+
+	float						m_fElapsedTimes = 0.0f;
+	float						m_fDuration = 2.0f;
+	float						m_fExplosionSpeed = 10.0f;
+	float						m_fExplosionRotation = 720.0f;
+
+	int life{ 0 };
+	bool barrier_mode = false;
+
+	virtual void Animate(float fElapsedTime);
+	virtual void Render(HDC hDCFrameBuffer, XMFLOAT3& p_pos, CCamera* pCamera);
+
+public:
+	static CMesh* m_pExplosionMesh;
+	static XMFLOAT3				m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
+
+	static void PrepareExplosion();
+
+};

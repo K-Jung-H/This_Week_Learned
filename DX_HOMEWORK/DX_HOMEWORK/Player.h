@@ -60,6 +60,8 @@ public:
 
 	float						m_fBulletEffectiveRange = 150.0f;
 	CBulletObject*				m_ppBullets[BULLETS];
+	
+	CBarrierObject* m_pBarrier;
 
 	void FireBullet(CGameObject* pLockedObject);
 

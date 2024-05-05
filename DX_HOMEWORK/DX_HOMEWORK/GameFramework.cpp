@@ -82,8 +82,8 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->SetCameraOffset(XMFLOAT3(0.0f, 5.0f, -15.0f));
 
 	m_pScene = new CScene(m_pPlayer);
-	m_pScene->ReadyObjects();
-//	m_pScene->BuildObjects(); 
+//	m_pScene->ReadyObjects();
+	m_pScene->BuildObjects(); 
 }
 
 void CGameFramework::ReleaseObjects()
@@ -159,6 +159,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			m_pLockedObject = NULL;
 			break;
 		case VK_TAB:
+			break;
+		case VK_SPACE:
+			((CAirplanePlayer*)m_pPlayer)->m_pBarrier->SetActive(true);
 			break;
 		default:
 			m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
