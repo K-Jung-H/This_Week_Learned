@@ -950,6 +950,18 @@ int Load_Object(const char* path, vector<pair<int, CPolygon*>>& pPolygon)
 	float mx = Middle_x / pPolygon.size();
 	float my = Middle_y / pPolygon.size();
 	float mz = Middle_z / pPolygon.size();
+
+	for (pair<int, CPolygon*>& face: pPolygon)
+	{
+		for (int i = 0; i < 3; ++i)
+		{
+			face.second->m_pVertices[i].m_xmf3Position.x -= mx * 2;
+			face.second->m_pVertices[i].m_xmf3Position.y -= my * 2;
+			face.second->m_pVertices[i].m_xmf3Position.z -= mz * 2;
+		}
+	}
+	
+
 	cout << mx << my << mz;
 	return pPolygon.size();
 }

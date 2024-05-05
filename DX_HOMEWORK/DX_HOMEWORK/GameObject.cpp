@@ -567,7 +567,7 @@ CMesh* CBarrierObject::m_pExplosionMesh = NULL;
 CBarrierObject::CBarrierObject()
 {
 	m_xmf4x4World = Matrix4x4::Identity();
-
+	SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
 }
 
 CBarrierObject::~CBarrierObject()
