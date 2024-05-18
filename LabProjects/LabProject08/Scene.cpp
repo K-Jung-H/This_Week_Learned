@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "Scene.h"
 CScene::CScene()
 {
@@ -75,21 +76,23 @@ void CScene::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice)
 	if (pd3dPixelShaderBlob) pd3dPixelShaderBlob->Release();
 }
 
-void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
-	* pd3dCommandList)
+void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-	CTriangleMesh* pMesh = new CTriangleMesh(pd3dDevice, pd3dCommandList);
+	//가로x세로x깊이가 12x12x12인 정육면체 메쉬를 생성한다. 
+	CCubeMeshDiffused *pCubeMesh = new CCubeMeshDiffused(pd3dDevice, pd3dCommandList, 12.0f, 12.0f, 12.0f);
 	m_nObjects = 1;
 	m_ppObjects = new CGameObject * [m_nObjects];
 	CRotatingObject* pRotatingObject = new CRotatingObject();
-	pRotatingObject->SetMesh(pMesh);
+	pRotatingObject->SetMesh(pCubeMesh);
 	CDiffusedShader* pShader = new CDiffusedShader();
 	pShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature);
 	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	pRotatingObject->SetShader(pShader);
 	m_ppObjects[0] = pRotatingObject;
 }
+
+
 
 void CScene::ReleaseObjects()
 {

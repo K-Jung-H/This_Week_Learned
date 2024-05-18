@@ -1,5 +1,6 @@
-#include "GameObject.h"
+#include "stdafx.h"
 #include "Shader.h"
+#include "GameObject.h"
 
 CGameObject::CGameObject()
 {

@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "Shader.h"
 
 CShader::CShader()
@@ -22,7 +23,11 @@ D3D12_RASTERIZER_DESC CShader::CreateRasterizerState()
 {
 	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
 	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
-	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+
+	//D3D12_FILL_MODE_WIREFRAME은 프리미티브(삼각형)의 내부를 칠하지 않고 변(Edge)만 그린다. 
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	//d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+
 	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
 	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
 	d3dRasterizerDesc.DepthBias = 0;
@@ -34,6 +39,8 @@ D3D12_RASTERIZER_DESC CShader::CreateRasterizerState()
 	d3dRasterizerDesc.ForcedSampleCount = 0;
 	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 	return(d3dRasterizerDesc);
+
+
 }
 
 

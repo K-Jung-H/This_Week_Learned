@@ -21,7 +21,10 @@
     <ClInclude Include="Resource.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="LabProject07.h">
+    <ClInclude Include="LabProject08.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="GameFramework.h">
@@ -45,12 +48,12 @@
     <ClInclude Include="Timer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Camera.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LabProject07.cpp">
+    <ClCompile Include="LabProject08.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="GameFramework.cpp">
@@ -74,12 +77,9 @@
     <ClCompile Include="Timer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LabProject07.rc">
+    <ResourceCompile Include="LabProject08.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -87,7 +87,7 @@
     <Image Include="small.ico">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="LabProject07.ico">
+    <Image Include="LabProject08.ico">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>
