@@ -140,6 +140,14 @@ void CGameObject::LookAt(XMFLOAT3& xmf3LookAt, XMFLOAT3& xmf3Up)
 	m_xmf4x4World._31 = xmf4x4View._13; m_xmf4x4World._32 = xmf4x4View._23; m_xmf4x4World._33 = xmf4x4View._33;
 }
 
+void CGameObject::SetMovingDirection_Reverse()
+{
+	m_xmf3MovingDirection.x *= -1.0f;
+	m_xmf3MovingDirection.y *= -1.0f;
+	m_xmf3MovingDirection.z *= -1.0f;
+}
+
+
 void CGameObject::UpdateBoundingBox()
 {
 	if (m_pMesh)
@@ -173,7 +181,8 @@ void CGameObject::Render(HDC hDCFrameBuffer, XMFLOAT4X4* pxmf4x4World, CMesh* pM
 
 void CGameObject::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 {
-	if (pCamera->IsInFrustum(m_xmOOBB)) CGameObject::Render(hDCFrameBuffer, &m_xmf4x4World, m_pMesh);
+	if (pCamera->IsInFrustum(m_xmOOBB)) 
+		CGameObject::Render(hDCFrameBuffer, &m_xmf4x4World, m_pMesh);
 }
 
 void CGameObject::GenerateRayForPicking(XMVECTOR& xmvPickPosition, XMMATRIX& xmmtxView, XMVECTOR& xmvPickRayOrigin, XMVECTOR& xmvPickRayDirection)
@@ -220,12 +229,9 @@ void CRotatingObject::Animate(float fElapsedTime)
 
 void CRotatingObject::Rotate_to_Player(float fElapsedTime, XMFLOAT3& xmf3LookTo)
 {
-	XMFLOAT3 temp(xmf3LookTo.x, GetPosition().y, xmf3LookTo.z);
-
 	LookAt(xmf3LookTo, GetLook());
 	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(XMConvertToRadians(90.0f), 0.0f, 0.0f), m_xmf4x4World);
 	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw( 0.0f, XMConvertToRadians(180.0f),0.0f), m_xmf4x4World);
-	CGameObject::Animate(fElapsedTime);
 }
 
 
@@ -365,7 +371,6 @@ void CBulletObject::Reset()
 	m_fElapsedTimeAfterFire = 0;
 	m_fMovingDistance = 0;
 	m_fRotationAngle = 0.0f;
-
 	m_bActive = false;
 }
 
@@ -487,26 +492,20 @@ void CAxisObject::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-XMFLOAT3 CStartObject::m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
-CMesh* CStartObject::m_pExplosionMesh = NULL;
+
 
 CStartObject::CStartObject()
 {
 	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(XMConvertToRadians(-90.0f),0.0f, 0.0f), m_xmf4x4World);
 	m_xmf4x4World = Matrix4x4::Multiply(XMMatrixRotationRollPitchYaw(0.0f, XMConvertToRadians(180.0f), 0.0f), m_xmf4x4World);
-
+	PrepareExplosion();
 }
 
 CStartObject::~CStartObject()
 {
 }
 
-void CStartObject::PrepareExplosion()
-{
-	for (int i = 0; i < EXPLOSION_DEBRISES; i++) XMStoreFloat3(&m_pxmf3SphereVectors[i], ::RandomUnitVectorOnSphere());
 
-	m_pExplosionMesh = new CCubeMesh(0.5f, 0.5f, 0.5f);
-}
 
 void CStartObject::Animate(float fElapsedTime)
 {
@@ -530,7 +529,7 @@ void CStartObject::Animate(float fElapsedTime)
 			m_bBlowingUp = false;
 			m_fElapsedTimes = 0.0f;
 			SetColor(m_dwDefaultColor);
-			GameStartValue = true;
+			GameStart = true;
 		}
 	}
 	else
@@ -556,32 +555,155 @@ void CStartObject::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 
 bool CStartObject::Get_Start_Value()
 {
-	return GameStartValue;
+	return GameStart;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-XMFLOAT3 CBarrierObject::m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
-CMesh* CBarrierObject::m_pExplosionMesh = NULL;
 
 CBarrierObject::CBarrierObject()
 {
 	m_xmf4x4World = Matrix4x4::Identity();
+	PrepareExplosion();
+	
 	SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
+	
 }
 
 CBarrierObject::~CBarrierObject()
 {
 }
 
-void CBarrierObject::PrepareExplosion()
+void CBarrierObject::Animate(float fElapsedTime)
 {
-	for (int i = 0; i < EXPLOSION_DEBRISES; i++) XMStoreFloat3(&m_pxmf3SphereVectors[i], ::RandomUnitVectorOnSphere());
-
-	m_pExplosionMesh = new CCubeMesh(0.5f, 0.5f, 0.5f);
+	if (m_bBlowingUp)
+	{
+		m_fElapsedTimes += fElapsedTime;
+		if (m_fElapsedTimes <= m_fDuration)
+		{
+			XMFLOAT3 xmf3Position = GetPosition();
+			for (int i = 0; i < EXPLOSION_DEBRISES ; i++)
+			{
+				m_pxmf4x4Transforms[i] = Matrix4x4::Identity();
+				m_pxmf4x4Transforms[i]._41 = xmf3Position.x + m_pxmf3SphereVectors[i].x * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._42 = xmf3Position.y + m_pxmf3SphereVectors[i].y * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._43 = xmf3Position.z + m_pxmf3SphereVectors[i].z * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i] = Matrix4x4::Multiply(Matrix4x4::RotationAxis(m_pxmf3SphereVectors[i], m_fExplosionRotation * m_fElapsedTimes), m_pxmf4x4Transforms[i]);
+			}
+		}
+		else
+		{
+			m_bBlowingUp = false;
+			barrier_mode = false;
+			m_bActive = false;
+			m_fElapsedTimes = 0.0f;
+		}
+	}
+	else
+	{
+		CRotatingObject::Animate(fElapsedTime);
+		m_pMesh->m_xmBSphere.Transform(m_xmBSphere, XMLoadFloat4x4(&m_xmf4x4World));
+	}
 }
 
-void CBarrierObject::Animate(float fElapsedTime)
+void CBarrierObject::Render(HDC hDCFrameBuffer, XMFLOAT3& p_pos ,CCamera* pCamera)
+{
+	if (m_bActive)
+	{
+		if (m_bBlowingUp)
+		{
+			for (int i = 0; i < EXPLOSION_DEBRISES; i++)
+			{
+				CGameObject::Render(hDCFrameBuffer, &m_pxmf4x4Transforms[i], m_pExplosionMesh);
+			}
+		}
+		else
+		{
+			XMFLOAT3 barrier_pos = p_pos;
+
+			SetPosition(barrier_pos.x, barrier_pos.y, barrier_pos.z);
+
+			CGameObject::Render(hDCFrameBuffer, pCamera);
+		}
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+CEnemyBulletObject::CEnemyBulletObject(float fEffectiveRange) : CBulletObject(fEffectiveRange) 
+{
+	m_fDuration = 1.0f;
+}
+CEnemyBulletObject::~CEnemyBulletObject()
+{
+
+}
+
+void CEnemyBulletObject::Animate(float fElapsedTime)
+{
+	if (crashed)
+	{
+		m_fElapsedTimes += fElapsedTime;
+		
+		if (m_fElapsedTimes <= 0.5f)
+		{
+			m_bBlowingUp = true;
+			XMFLOAT3 xmf3Position = GetPosition();
+			for (int i = 0; i < 10; i++)
+			{
+				m_pxmf4x4Transforms[i] = Matrix4x4::Identity();
+				m_pxmf4x4Transforms[i]._41 = xmf3Position.x + m_pxmf3SphereVectors[i].x * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._42 = xmf3Position.y + m_pxmf3SphereVectors[i].y * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._43 = xmf3Position.z + m_pxmf3SphereVectors[i].z * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i] = Matrix4x4::Multiply(Matrix4x4::RotationAxis(m_pxmf3SphereVectors[i], m_fExplosionRotation * m_fElapsedTimes), m_pxmf4x4Transforms[i]);
+			}
+		}
+		else
+		{
+			m_bBlowingUp = false;
+			crashed = false;
+			m_fElapsedTimes = 0.0f;
+			Reset();
+		}
+	}
+
+	CBulletObject::Animate(fElapsedTime);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CEnemyObject::CEnemyObject()
+{
+	CCubeMesh* pBulletMesh = new CCubeMesh(1.0f, 4.0f, 1.0f);
+	for (int i = 0; i < E_BULLETS; i++)
+	{
+		m_ppBullets[i] = new CEnemyBulletObject(m_fBulletEffectiveRange);
+		m_ppBullets[i]->SetMesh(pBulletMesh);
+		m_ppBullets[i]->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+		m_ppBullets[i]->SetRotationSpeed(360.0f);
+		m_ppBullets[i]->SetMovingSpeed(30.0f);
+		m_ppBullets[i]->SetActive(false);
+	}
+	m_fDuration = 0.5f;
+	m_fExplosionSpeed = 50.0f;
+}
+
+CEnemyObject::~CEnemyObject()
+{
+}
+
+void CEnemyObject::Render(HDC hDCFrameBuffer, CCamera* pCamera)
+{
+	for (int i = 0; i < E_BULLETS; i++)
+		if (m_ppBullets[i]->m_bActive) 
+			m_ppBullets[i]->Render(hDCFrameBuffer, pCamera);
+
+	CExplosiveObject::Render(hDCFrameBuffer, pCamera);
+}
+
+void CEnemyObject::Animate(float fElapsedTime)
 {
 	if (m_bBlowingUp)
 	{
@@ -603,37 +725,60 @@ void CBarrierObject::Animate(float fElapsedTime)
 			m_bBlowingUp = false;
 			m_fElapsedTimes = 0.0f;
 			SetColor(m_dwDefaultColor);
+			SetPosition(RespawnPoint);
 		}
 	}
 	else
 	{
-		// 원인 찾기 , 왜 공전하는지 이유를 찾아야 함
-		//XMFLOAT3 temp = GetPosition();
-
-		//SetPosition(temp.x, temp.y, temp.z);
 		CRotatingObject::Animate(fElapsedTime);
+	}
 
+	for (int i = 0; i < E_BULLETS; i++)
+	{
+		if (m_ppBullets[i]->m_bActive) 
+			m_ppBullets[i]->Animate(fElapsedTime);
+	}
 
+	cool_down += fElapsedTime;
+	if (Fire_Period <= cool_down)
+	{
+		FireBullet(NULL);
+		cool_down = 0;
 	}
 }
 
-void CBarrierObject::Render(HDC hDCFrameBuffer, XMFLOAT3& p_pos ,CCamera* pCamera)
+
+void CEnemyObject::FireBullet(CGameObject* pLockedObject)
 {
-	if (m_bBlowingUp)
+
+	CEnemyBulletObject* eBulletObject = NULL;
+	for (int i = 0; i < E_BULLETS; i++)
 	{
-		for (int i = 0; i < EXPLOSION_DEBRISES; i++)
+		if (!m_ppBullets[i]->m_bActive && !m_ppBullets[i]->crashed)
 		{
-			CGameObject::Render(hDCFrameBuffer, &m_pxmf4x4Transforms[i], m_pExplosionMesh);
+			eBulletObject = m_ppBullets[i];
+			break;
 		}
 	}
-	else
+
+	if (eBulletObject)
 	{
-		//SetScale(XMFLOAT3(5.0f, 5.0f, 5.0f));
-		XMFLOAT3 barrier_pos = p_pos;
+		XMFLOAT3 xmf3Position = GetPosition();
+		XMFLOAT3 xmf3Direction = GetUp();
+		XMFLOAT3 xmf3FirePosition = Vector3::Add(xmf3Position, Vector3::ScalarProduct(xmf3Direction, 6.0f, false));
 
-		SetPosition(barrier_pos.x, barrier_pos.y, barrier_pos.z);
+		eBulletObject->m_xmf4x4World = m_xmf4x4World;
 
-		CGameObject::Render(hDCFrameBuffer, pCamera);
+		eBulletObject->SetFirePosition(xmf3FirePosition);
+		eBulletObject->SetMovingDirection(xmf3Direction);
+		eBulletObject->SetColor(RGB(255, 0, 0));
+		eBulletObject->SetActive(true);
+		eBulletObject->crashed = false;
+
+		if (pLockedObject)
+		{
+			eBulletObject->m_pLockedObject = pLockedObject;
+			eBulletObject->SetColor(RGB(0, 0, 255));
+		}
 	}
 }
-

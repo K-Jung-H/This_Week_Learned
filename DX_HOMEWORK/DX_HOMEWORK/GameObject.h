@@ -37,8 +37,9 @@ public:
 	void SetPosition(float x, float y, float z);
 	void SetPosition(XMFLOAT3& xmf3Position);
 	void SetScale(const XMFLOAT3& xmf3Scale);
-
+	
 	void SetMovingDirection(XMFLOAT3& xmf3MovingDirection) { m_xmf3MovingDirection = Vector3::Normalize(xmf3MovingDirection); }
+	void SetMovingDirection_Reverse();
 	void SetMovingSpeed(float fSpeed) { m_fMovingSpeed = fSpeed; }
 	void SetMovingRange(float fRange) { m_fMovingRange = fRange; }
 
@@ -129,7 +130,7 @@ public:
 	virtual void Render(HDC hDCFrameBuffer, CCamera* pCamera);
 };
 
-class CBulletObject : public CRotatingObject
+class CBulletObject : public CExplosiveObject
 {
 public:
 	CBulletObject(float fEffectiveRange);
@@ -162,58 +163,80 @@ public:
 };
 
 
-class CStartObject : public CRotatingObject
+class CStartObject : public CExplosiveObject
 {
 public:
 	CStartObject();
 	virtual ~CStartObject();
 
-	bool						m_bBlowingUp = false;
-	bool						GameStartValue = false; // true가 되면 게임 시작
-	XMFLOAT4X4					m_pxmf4x4Transforms[EXPLOSION_DEBRISES];
 
-	float						m_fElapsedTimes = 0.0f;
-	float						m_fDuration = 2.0f;
-	float						m_fExplosionSpeed = 10.0f;
-	float						m_fExplosionRotation = 720.0f;
+	bool						GameStart = false; // true가 되면 게임 시작
+
 
 	virtual void Animate(float fElapsedTime);
 	virtual void Render(HDC hDCFrameBuffer, CCamera* pCamera);
 
 public:
-	static CMesh* m_pExplosionMesh;
-	static XMFLOAT3				m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
-
-	static void PrepareExplosion();
 	bool Get_Start_Value();
 };
 
 
 
-class CBarrierObject : public CRotatingObject
+class CBarrierObject : public CExplosiveObject
 {
 public:
 	CBarrierObject();
 	virtual ~CBarrierObject();
 
-	bool						m_bBlowingUp = false;
-	XMFLOAT4X4					m_pxmf4x4Transforms[EXPLOSION_DEBRISES];
-
-	float						m_fElapsedTimes = 0.0f;
-	float						m_fDuration = 2.0f;
-	float						m_fExplosionSpeed = 10.0f;
-	float						m_fExplosionRotation = 720.0f;
-
-	int life{ 0 };
+	int life{ 10 };
 	bool barrier_mode = false;
 
 	virtual void Animate(float fElapsedTime);
 	virtual void Render(HDC hDCFrameBuffer, XMFLOAT3& p_pos, CCamera* pCamera);
+	BoundingSphere m_xmBSphere = BoundingSphere();
 
-public:
-	static CMesh* m_pExplosionMesh;
-	static XMFLOAT3				m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
-
-	static void PrepareExplosion();
 
 };
+
+
+class CEnemyBulletObject : public CBulletObject
+{
+public:
+
+	bool crashed{ false };
+	XMFLOAT3	m_crashPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+	CEnemyBulletObject(float fEffectiveRange);
+	virtual ~CEnemyBulletObject();
+
+public:
+	virtual void Animate(float fElapsedTime);
+
+};
+
+
+#define E_BULLETS					20
+
+class CEnemyObject : public CExplosiveObject
+{
+public:
+	CEnemyObject();
+	virtual ~CEnemyObject();
+
+	float Fire_Period{ 2 };
+	float cool_down{ 0 };
+
+	float						m_fBulletEffectiveRange = 150.0f;
+
+	XMFLOAT3 RespawnPoint{ 0.0f,0.0f,0.0f };
+	CEnemyBulletObject* m_ppBullets[E_BULLETS];
+
+
+	void SetRespawn(XMFLOAT3 floats) { RespawnPoint = floats; };
+	void FireBullet(CGameObject* pLockedObject);
+	virtual void Animate(float fElapsedTime);
+	virtual void Render(HDC hDCFrameBuffer, CCamera* pCamera);
+};
+
+inline float RandF(float fMin, float fMax);
+XMVECTOR RandomUnitVectorOnSphere();

@@ -5,6 +5,7 @@
 CScene::CScene(CPlayer* pPlayer)
 {
 	m_pPlayer = pPlayer;
+	Score = 0;
 }
 
 CScene::~CScene()
@@ -21,7 +22,7 @@ void CScene::BuildObjects()
 	m_pWallsObject = new CWallsObject();
 	m_pWallsObject->SetPosition(0.0f, 0.0f, 0.0f);
 	m_pWallsObject->SetMesh(pWallCubeMesh);
-	m_pWallsObject->SetColor(RGB(0, 0, 0));
+	m_pWallsObject->SetColor(RGB(100, 100, 100));
 	m_pWallsObject->m_pxmf4WallPlanes[0] = XMFLOAT4(+1.0f, 0.0f, 0.0f, fHalfWidth);
 	m_pWallsObject->m_pxmf4WallPlanes[1] = XMFLOAT4(-1.0f, 0.0f, 0.0f, fHalfWidth);
 	m_pWallsObject->m_pxmf4WallPlanes[2] = XMFLOAT4(0.0f, +1.0f, 0.0f, fHalfHeight);
@@ -36,125 +37,134 @@ void CScene::BuildObjects()
 	m_nObjects = 10;
 	m_ppObjects = new CGameObject * [m_nObjects];
 
-	CExplosiveObject *pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	CEnemyObject*pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(10.0f, 10.0f, 30.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(10.0f, 10.0f, 30.0f));
+	pEnemyObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 1.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	pEnemyObject->SetMovingSpeed(10.5f);
+	pEnemyObject->Fire_Period = 2.0f;
+	m_ppObjects[0] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(255, 0, 0));
-	pExplosiveObject->SetPosition(10.0f, 10.0f, 30.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	pExplosiveObject->SetMovingSpeed(10.5f);
-	m_ppObjects[0] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(10.0f, -10.0f, 30.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(10.0f, -10.0f, 30.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(-1.0f, 0.0f, 0.0f));
+	pEnemyObject->SetMovingSpeed(8.8f);
+	pEnemyObject->Fire_Period = 3.0f;
+	m_ppObjects[1] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(0, 0, 255));
-	pExplosiveObject->SetPosition(10.0f, -10.0f, 30.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(-1.0f, 0.0f, 0.0f));
-	pExplosiveObject->SetMovingSpeed(8.8f);
-	m_ppObjects[1] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(-10.0f, -10.0f, 30.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(-10.0f, -10.0f, 30.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(1.0f, -1.0f, 0.0f));
+	pEnemyObject->SetMovingSpeed(5.2f);
+	pEnemyObject->Fire_Period = 3.0f;
+	m_ppObjects[2] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(0, 255, 0));
-	pExplosiveObject->SetPosition(-10.0f, -10.0f, 30.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, -1.0f, 0.0f));
-	pExplosiveObject->SetMovingSpeed(5.2f);
-	m_ppObjects[2] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(-10.0f, 10.0f, 30.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(-10.0f, 10.0f, 30.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 1.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, 1.0f));
+	pEnemyObject->SetMovingSpeed(20.4f);
+	pEnemyObject->Fire_Period = 4.0f;
+	m_ppObjects[3] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(0, 255, 255));
-	pExplosiveObject->SetPosition(-10.0f, 10.0f, 30.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, 1.0f));
-	pExplosiveObject->SetMovingSpeed(20.4f);
-	m_ppObjects[3] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(10.0f, 10.0f, 0.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(10.0f, 10.0f, 0.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 1.0f));
+	pEnemyObject->SetMovingSpeed(6.4f);
+	pEnemyObject->Fire_Period = 2.5f;
+	m_ppObjects[4] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(128, 0, 255));
-	pExplosiveObject->SetPosition(10.0f, 10.0f, 0.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetMovingSpeed(6.4f);
-	m_ppObjects[4] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(10.0f, -10.0f, 0.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(10.0f, -10.0f, 0.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(1.0f, 0.0f, 1.0f));
+	pEnemyObject->SetMovingSpeed(8.9f);
+	pEnemyObject->Fire_Period = 3.5f;
+	m_ppObjects[5] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(255, 0, 255));
-	pExplosiveObject->SetPosition(10.0f, -10.0f, 0.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, 0.0f, 1.0f));
-	pExplosiveObject->SetMovingSpeed(8.9f);
-	m_ppObjects[5] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(-10.0f, -10.0f, 0.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(-10.0f, -10.0f, 0.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(1.0f, 1.0f, 1.0f));
+	pEnemyObject->SetMovingSpeed(9.7f);
+	pEnemyObject->Fire_Period = 4.5f;
+	m_ppObjects[6] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(255, 0, 255));
-	pExplosiveObject->SetPosition(-10.0f, -10.0f, 0.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(1.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetMovingSpeed(9.7f);
-	m_ppObjects[6] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(-10.0f, 10.0f, 0.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(-10.0f, 10.0f, 0.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(-1.0f, 1.0f, 1.0f));
+	pEnemyObject->SetMovingSpeed(15.6f);
+	pEnemyObject->Fire_Period = 5.0f;
+	m_ppObjects[7] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(255, 0, 128));
-	pExplosiveObject->SetPosition(-10.0f, 10.0f, 0.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(-1.0f, 1.0f, 1.0f));
-	pExplosiveObject->SetMovingSpeed(15.6f);
-	m_ppObjects[7] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(-15.0f, 0.0f, -20.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(-15.0f, 0.0f, -20.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, -1.0f));
+	pEnemyObject->SetMovingSpeed(15.0f);
+	pEnemyObject->Fire_Period = 5.5f;
+	m_ppObjects[8] = pEnemyObject;
 
-	pExplosiveObject->SetColor(RGB(128, 0, 255));
-	pExplosiveObject->SetPosition(-15.0f, 0.0f, -20.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, -1.0f));
-	pExplosiveObject->SetMovingSpeed(15.0f);
-	m_ppObjects[8] = pExplosiveObject;
+	pEnemyObject = new CEnemyObject();
+	pEnemyObject->SetMesh(pAirplaneMesh);
+	pEnemyObject->SetColor(RGB(255, 0, 0));
+	pEnemyObject->SetPosition(+15.0f, 0.0f, -20.0f);
+	pEnemyObject->SetRespawn(XMFLOAT3(+15.0f, 0.0f, -20.0f));
 
-	pExplosiveObject = new CExplosiveObject();
-	//pExplosiveObject->SetMesh(pCubeMesh);
-	pExplosiveObject->SetMesh(pAirplaneMesh);
-
-	pExplosiveObject->SetColor(RGB(255, 64, 64));
-	pExplosiveObject->SetPosition(+15.0f, 0.0f, -20.0f);
-	pExplosiveObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
-	pExplosiveObject->SetRotationSpeed(30.0f);
-	pExplosiveObject->SetMovingDirection(XMFLOAT3(-0.0f, 0.0f, -1.0f));
-	pExplosiveObject->SetMovingSpeed(15.0f);
-	m_ppObjects[9] = pExplosiveObject;
+	pEnemyObject->SetRotationAxis(XMFLOAT3(1.0f, 1.0f, 0.0f));
+	pEnemyObject->SetRotationSpeed(30.0f);
+	pEnemyObject->SetMovingDirection(XMFLOAT3(-0.0f, 0.0f, -1.0f));
+	pEnemyObject->SetMovingSpeed(15.0f);
+	pEnemyObject->Fire_Period = 8.0f;
+	m_ppObjects[9] = pEnemyObject;
 
 #ifdef _WITH_DRAW_AXIS
 	m_pWorldAxis = new CGameObject();
@@ -167,7 +177,8 @@ void CScene::ReleaseObjects()
 {
 	if (CExplosiveObject::m_pExplosionMesh) CExplosiveObject::m_pExplosionMesh->Release();
 
-	for (int i = 0; i < m_nObjects; i++) if (m_ppObjects[i]) delete m_ppObjects[i];
+	for (int i = 0; i < m_nObjects; i++) 
+		if (m_ppObjects[i]) delete m_ppObjects[i];
 	if (m_ppObjects) delete[] m_ppObjects;
 
 	if (m_pWallsObject) delete m_pWallsObject;
@@ -210,9 +221,10 @@ void CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			}
 			break;
 
-		case VK_TAB:
-			GameStart = true;
-			Start_Value = true;
+		case 'Z':
+			((CAirplanePlayer*)m_pPlayer)->m_pBarrier->SetActive(true);
+			((CAirplanePlayer*)m_pPlayer)->m_pBarrier->barrier_mode = true;
+			((CAirplanePlayer*)m_pPlayer)->m_pBarrier->life = 10;
 			break;
 
 		default:
@@ -339,7 +351,8 @@ void CScene::CheckPlayerByWallCollision()
 	m_pWallsObject->m_xmOOBBPlayerMoveCheck.Transform(xmOOBBPlayerMoveCheck, XMLoadFloat4x4(&m_pWallsObject->m_xmf4x4World));
 	XMStoreFloat4(&xmOOBBPlayerMoveCheck.Orientation, XMQuaternionNormalize(XMLoadFloat4(&xmOOBBPlayerMoveCheck.Orientation)));
 
-	if (!xmOOBBPlayerMoveCheck.Intersects(m_pPlayer->m_xmOOBB)) m_pWallsObject->SetPosition(m_pPlayer->m_xmf3Position);
+	if (!xmOOBBPlayerMoveCheck.Intersects(m_pPlayer->m_xmOOBB)) 
+		m_pWallsObject->SetPosition(m_pPlayer->m_xmf3Position);
 }
 
 void CScene::CheckObjectByBulletCollisions()
@@ -352,8 +365,71 @@ void CScene::CheckObjectByBulletCollisions()
 			if (ppBullets[j]->m_bActive && m_ppObjects[i]->m_xmOOBB.Intersects(ppBullets[j]->m_xmOOBB))
 			{
 				CExplosiveObject* pExplosiveObject = (CExplosiveObject*)m_ppObjects[i];
+				if (!pExplosiveObject->m_bBlowingUp)
+					Score += 100;
+
 				pExplosiveObject->m_bBlowingUp = true;
 				ppBullets[j]->Reset();
+				
+			}
+		}
+	}
+}
+
+void CScene::CheckPlayerByBulletCollisions()
+{
+
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		for (int j = 0; j < E_BULLETS; j++)
+		{
+			CEnemyBulletObject** ppBullets = static_cast<CEnemyObject*>(m_ppObjects[i])->m_ppBullets;
+			if (ppBullets[j]->m_bActive && !ppBullets[j]->crashed && m_pPlayer->m_xmOOBB.Intersects(ppBullets[j]->m_xmOOBB))
+			{
+				ppBullets[j]->SetColor(RGB(255, 0, 0));
+				ppBullets[j]->crashed = true;
+				ppBullets[j]->m_fExplosionSpeed = 50.0f;
+				CAirplanePlayer* aPlayer = static_cast<CAirplanePlayer*>(m_pPlayer);
+				if (aPlayer->Life > 0)
+				{
+					if (!aPlayer->m_Armored)
+					{
+						aPlayer->Life -= 1;
+						aPlayer->m_Armored = true;
+
+					}
+				}
+				else
+					aPlayer->Life = 0;
+			}
+		}
+	}
+}
+
+void CScene::CheckBarrierByBulletCollisions()
+{
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		for (int j = 0; j < E_BULLETS; j++)
+		{
+			CEnemyBulletObject** ppBullets = static_cast<CEnemyObject*>(m_ppObjects[i])->m_ppBullets;
+			CBarrierObject* pBarrier = static_cast<CAirplanePlayer*>(m_pPlayer)->m_pBarrier;
+			if (ppBullets[j]->m_bActive && !ppBullets[j]->crashed && pBarrier->m_pMesh->m_xmBSphere.Intersects(ppBullets[j]->m_xmOOBB))
+			{
+				if (pBarrier->life > 1)
+				{
+					pBarrier->life -= 1;
+					float new_speed = 200 - 20 * (10 - pBarrier->life);
+					pBarrier->SetRotationSpeed(new_speed);
+					ppBullets[j]->SetMovingDirection_Reverse();
+					ppBullets[j]->SetColor(RGB(128, 128, 255));
+					ppBullets[j]->crashed = true;
+					ppBullets[j]->m_fExplosionSpeed = 30.0f;
+				}
+				else
+				{
+					pBarrier->m_bBlowingUp = true;
+				}
 			}
 		}
 	}
@@ -365,34 +441,42 @@ void CScene::Animate(float fElapsedTime)
 
 	for (int i = 0; i < m_nObjects; i++)
 	{
-		if (GameStart)
+		if (GameMode != 0)
 		{
 			XMFLOAT3 Ppos = m_pPlayer->GetPosition();
 			m_ppObjects[i]->Animate(fElapsedTime);
-			static_cast<CRotatingObject*>(m_ppObjects[i])->Rotate_to_Player(fElapsedTime, Ppos);
+			if (!static_cast<CEnemyObject*>(m_ppObjects[i])->m_bBlowingUp)
+			{
+				static_cast<CRotatingObject*>(m_ppObjects[i])->Rotate_to_Player(fElapsedTime, Ppos);
+			}
 		}
 		else
 		{
 			m_ppObjects[i]->Animate(fElapsedTime);
-
 		}
 
 	}
 
-	
+
 	CheckPlayerByWallCollision();
 
 	CheckObjectByWallCollisions();
 
-	CheckObjectByObjectCollisions();
-
 	CheckObjectByBulletCollisions();
 
-	if (!GameStart && !Start_Value)
+	if (GameMode != 0)
 	{
-		CStartObject* startObject = static_cast<CStartObject*>(m_ppObjects[0]);
-		Start_Value = startObject->Get_Start_Value();
+		CheckObjectByObjectCollisions();
+
+		if (static_cast<CAirplanePlayer*>(m_pPlayer)->m_pBarrier->barrier_mode)
+			CheckBarrierByBulletCollisions();
+		else 
+			CheckPlayerByBulletCollisions();
+		Score += 0.2;
 	}
+
+
+
 }
 
 void CScene::Render(HDC hDCFrameBuffer, CCamera* pCamera)
@@ -401,10 +485,48 @@ void CScene::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 
 	CGraphicsPipeline::SetViewPerspectiveProjectTransform(&pCamera->m_xmf4x4ViewPerspectiveProject);
 	m_pWallsObject->Render(hDCFrameBuffer, pCamera);
-	for (int i = 0; i < m_nObjects; i++) m_ppObjects[i]->Render(hDCFrameBuffer, pCamera);
+	for (int i = 0; i < m_nObjects; i++) 
+		m_ppObjects[i]->Render(hDCFrameBuffer, pCamera);
 
-	if (m_pPlayer) m_pPlayer->Render(hDCFrameBuffer, pCamera);
+	if (m_pPlayer) 
+		m_pPlayer->Render(hDCFrameBuffer, pCamera);
 
+
+	// 텍스트 출력 위치
+	if (GameMode != 0)
+	{
+		SetTextColor(hDCFrameBuffer, RGB(255, 255, 255));
+		CAirplanePlayer* pPlayer = static_cast<CAirplanePlayer*>(m_pPlayer);
+		CBarrierObject* pBarrier = pPlayer->m_pBarrier;
+		if (!pBarrier->m_bBlowingUp && pBarrier->barrier_mode)
+		{
+			int barrier_life = pBarrier->life;
+			std::wstring text = L"Barrier Life: " + std::to_wstring(barrier_life);
+			TextOut(hDCFrameBuffer, 0, 15, text.c_str(), text.length());
+
+		}
+
+		if (pPlayer->Life > 0) // 플레이어의 체력
+		{
+			int player_life = pPlayer->Life;
+			std::wstring text = L"Player Life: " + std::to_wstring(player_life);
+			TextOut(hDCFrameBuffer, 0, 0, text.c_str(), text.length());
+		}
+
+		if (GameMode == 1) // 게임 점수
+		{
+			int game_score = Score;
+			std::wstring text = L"Game Score: " + std::to_wstring(game_score);
+			TextOut(hDCFrameBuffer, 0, 30, text.c_str(), text.length());
+		}
+	}
+	else
+	{
+		SetTextColor(hDCFrameBuffer, RGB(255, 255, 255));
+		int last_score = Last_Score;
+		std::wstring text = L"Last Score: " + std::to_wstring(last_score);
+		TextOut(hDCFrameBuffer, 0, 0, text.c_str(), text.length());
+	}
 
 //UI
 #ifdef _WITH_DRAW_AXIS
@@ -430,7 +552,7 @@ void CScene::ReadyObjects()
 	m_pWallsObject = new CWallsObject();
 	m_pWallsObject->SetPosition(0.0f, 0.0f, 0.0f);
 	m_pWallsObject->SetMesh(pWallCubeMesh);
-	m_pWallsObject->SetColor(RGB(0, 0, 0));
+	m_pWallsObject->SetColor(RGB(100, 100, 100));
 	m_pWallsObject->m_pxmf4WallPlanes[0] = XMFLOAT4(+1.0f, 0.0f, 0.0f, fHalfWidth);
 	m_pWallsObject->m_pxmf4WallPlanes[1] = XMFLOAT4(-1.0f, 0.0f, 0.0f, fHalfWidth);
 	m_pWallsObject->m_pxmf4WallPlanes[2] = XMFLOAT4(0.0f, +1.0f, 0.0f, fHalfHeight);
@@ -450,10 +572,10 @@ void CScene::ReadyObjects()
 	pStartObject->SetMesh(pStartMesh);
 
 	pStartObject->SetColor(RGB(255, 0, 0));
-	pStartObject->SetPosition(0.0f, 0.0f, 25.0f);
+	pStartObject->SetPosition(0.0f, 0.0f, 50.0f);
 	pStartObject->SetRotationAxis(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pStartObject->SetRotationSpeed(0.0f);
-	pStartObject->SetMovingDirection(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	pStartObject->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	pStartObject->SetMovingSpeed(10.5f);
 
 	m_ppObjects[0] = pStartObject;
@@ -461,11 +583,22 @@ void CScene::ReadyObjects()
 
 }
 
-/*
- 		for (int i = 0; i < 3; ++i)
-		{
-			face->m_pVertices[i].m_xmf3Position.x * 100;
-			face->m_pVertices[i].m_xmf3Position.y * 100;
-			face->m_pVertices[i].m_xmf3Position.z * 100;
-		}
-*/
+
+bool CScene::Get_Start()
+{
+	CStartObject* startObject = static_cast<CStartObject*>(m_ppObjects[0]);
+	return startObject->Get_Start_Value();
+}
+bool CScene::Get_End()
+{
+	CAirplanePlayer* Player = static_cast<CAirplanePlayer*>(m_pPlayer);
+	if (Player->Life > 0)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+
+}

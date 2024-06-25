@@ -1,10 +1,31 @@
 #include "stdafx.h"
 #include "Player.h"
 
+inline float pRandF(float fMin, float fMax)
+{
+	return(fMin + ((float)rand() / (float)RAND_MAX) * (fMax - fMin));
+}
+
+XMVECTOR pRandomUnitVectorOnSphere()
+{
+	XMVECTOR xmvOne = XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
+	XMVECTOR xmvZero = XMVectorZero();
+
+	while (true)
+	{
+		XMVECTOR v = XMVectorSet(RandF(-1.0f, 1.0f), RandF(-1.0f, 1.0f), RandF(-1.0f, 1.0f), 0.0f);
+		if (!XMVector3Greater(XMVector3LengthSq(v), xmvOne)) return(XMVector3Normalize(v));
+	}
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+
+
 CPlayer::CPlayer()
 {
+	
 }
 
 CPlayer::~CPlayer()
@@ -131,6 +152,17 @@ void CPlayer::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+XMFLOAT3 CAirplanePlayer::m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
+CMesh* CAirplanePlayer::m_pExplosionMesh = NULL;
+
+void CAirplanePlayer::PrepareExplosion()
+{
+	for (int i = 0; i < EXPLOSION_DEBRISES; i++) XMStoreFloat3(&m_pxmf3SphereVectors[i], pRandomUnitVectorOnSphere());
+
+	m_pExplosionMesh = new CCubeMesh(0.5f, 0.5f, 0.5f);
+}
+
 CAirplanePlayer::CAirplanePlayer()
 {
 	CCubeMesh* pBulletMesh = new CCubeMesh(1.0f, 4.0f, 1.0f);
@@ -148,10 +180,14 @@ CAirplanePlayer::CAirplanePlayer()
 	CSphereMesh* pBarrierMesh = new CSphereMesh(5.0f, 5.0f, 5.0f);
 	m_pBarrier->SetMesh(pBarrierMesh);
 	m_pBarrier->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
-	m_pBarrier->SetRotationSpeed(360.0f);
-	m_pBarrier->SetMovingSpeed(100.0f);
+	m_pBarrier->SetRotationSpeed(60.0f);
+	m_pBarrier->SetMovingSpeed(60.0f);
 	m_pBarrier->SetActive(false);
+	m_pBarrier->SetColor(RGB(128, 128, 255));
 
+	m_pBarrier->m_pMesh->m_xmBSphere.Radius = 5.0f;
+	Life = 10;
+	PrepareExplosion();
 }
 
 CAirplanePlayer::~CAirplanePlayer()
@@ -161,19 +197,58 @@ CAirplanePlayer::~CAirplanePlayer()
 
 void CAirplanePlayer::Animate(float fElapsedTime)
 {
-	CPlayer::Animate(fElapsedTime);
+	if (Life == 0)
+	{
+		m_bBlowingUp = true;
+	}
+	
+	if (m_Armored)
+	{
+		Armored(fElapsedTime);
+	}
+
+	if (m_bBlowingUp)
+	{
+		m_fElapsedTimes += fElapsedTime;
+		if (m_fElapsedTimes <= m_fDuration)
+		{
+			XMFLOAT3 xmf3Position = GetPosition();
+			for (int i = 0; i < EXPLOSION_DEBRISES; i++)
+			{
+				m_pxmf4x4Transforms[i] = Matrix4x4::Identity();
+				m_pxmf4x4Transforms[i]._41 = xmf3Position.x + m_pxmf3SphereVectors[i].x * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._42 = xmf3Position.y + m_pxmf3SphereVectors[i].y * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i]._43 = xmf3Position.z + m_pxmf3SphereVectors[i].z * m_fExplosionSpeed * m_fElapsedTimes;
+				m_pxmf4x4Transforms[i] = Matrix4x4::Multiply(Matrix4x4::RotationAxis(m_pxmf3SphereVectors[i], m_fExplosionRotation * m_fElapsedTimes), m_pxmf4x4Transforms[i]);
+			}
+		}
+		else
+		{
+			Life = 10;
+			m_bBlowingUp = false;
+			m_fElapsedTimes = 0.0f;
+		}
+	}
+	else
+	{
+		CPlayer::Animate(fElapsedTime);
+		if (m_pBarrier->barrier_mode)
+		{
+			m_pBarrier->Animate(fElapsedTime);
+			m_pBarrier->m_pMesh->m_xmBSphere.Center = GetPosition();
+
+			if (m_pBarrier->life == 0)
+			{
+				m_pBarrier->m_fElapsedTimes = 0.0f;
+				m_pBarrier->m_bBlowingUp = true;
+			}
+		}
+	}
 
 	for (int i = 0; i < BULLETS; i++)
 	{
 		if (m_ppBullets[i]->m_bActive) m_ppBullets[i]->Animate(fElapsedTime);
 	}
-
-	if (m_pBarrier->m_bActive)
-	{
-		//m_pBarrier->SetPosition(getPosition());
-		m_pBarrier->Animate(fElapsedTime);
-	}
-
 }
 
 void CAirplanePlayer::OnUpdateTransform()
@@ -185,26 +260,29 @@ void CAirplanePlayer::OnUpdateTransform()
 
 void CAirplanePlayer::Render(HDC hDCFrameBuffer, CCamera* pCamera)
 {
-	CPlayer::Render(hDCFrameBuffer, pCamera);
-
-	for (int i = 0; i < BULLETS; i++) if (m_ppBullets[i]->m_bActive) m_ppBullets[i]->Render(hDCFrameBuffer, pCamera);
-	
-	if (m_pBarrier->m_bActive)
+	if (m_bBlowingUp)
 	{
-		m_pBarrier->Render(hDCFrameBuffer, GetPosition(), pCamera);
+		for (int i = 0; i < EXPLOSION_DEBRISES; i++)
+		{
+			CGameObject::Render(hDCFrameBuffer, &m_pxmf4x4Transforms[i], m_pExplosionMesh);
+		}
 	}
+	else
+	{
+		CPlayer::Render(hDCFrameBuffer, pCamera);
+		if (m_pBarrier->m_bActive)
+		{
+			m_pBarrier->Render(hDCFrameBuffer, GetPosition(), pCamera);
+		}
+	}
+
+	for (int i = 0; i < BULLETS; i++)
+		if (m_ppBullets[i]->m_bActive) m_ppBullets[i]->Render(hDCFrameBuffer, pCamera);
+	
 }
 
 void CAirplanePlayer::FireBullet(CGameObject* pLockedObject)
 {
-/*
-	if (pLockedObject) 
-	{
-		LookAt(pLockedObject->GetPosition(), XMFLOAT3(0.0f, 1.0f, 0.0f));
-		OnUpdateTransform();
-	}
-*/
-
 	CBulletObject* pBulletObject = NULL;
 	for (int i = 0; i < BULLETS; i++)
 	{
@@ -225,13 +303,28 @@ void CAirplanePlayer::FireBullet(CGameObject* pLockedObject)
 
 		pBulletObject->SetFirePosition(xmf3FirePosition);
 		pBulletObject->SetMovingDirection(xmf3Direction);
-		pBulletObject->SetColor(RGB(255, 0, 0));
+		pBulletObject->SetColor(RGB(50, 50, 255));
 		pBulletObject->SetActive(true);
 
 		if (pLockedObject)
 		{
 			pBulletObject->m_pLockedObject = pLockedObject;
-			pBulletObject->SetColor(RGB(0, 0, 255));
+			pBulletObject->SetColor(RGB(0, 255, 0));
 		}
+	}
+}
+
+void CAirplanePlayer::Armored(float fElapsedTime)
+{
+	if (m_aElapsedTimes <= m_fDuration)
+	{
+		SetColor(RGB(200, 200, 255));
+		m_aElapsedTimes += fElapsedTime;
+	}
+	else
+	{
+		SetColor(RGB(50, 50, 255));
+		m_Armored = false;
+		m_aElapsedTimes = 0.0f;
 	}
 }

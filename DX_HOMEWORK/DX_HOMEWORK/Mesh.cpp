@@ -120,6 +120,11 @@ int CMesh::CheckRayIntersection(XMVECTOR& xmvPickRayOrigin, XMVECTOR& xmvPickRay
 				if (bIntersected) nIntersections++;
 				break;
 			}
+			case 9:
+			case 18:
+			case 19:
+				nIntersections++;
+				break;
 			}
 		}
 	}
@@ -483,48 +488,6 @@ CStartMesh::CStartMesh(float fWidth, float fHeight, float fDepth) : CMesh(21)
 	float fHalfHeight = fHeight * 0.5f;
 	float fHalfDepth = fDepth * 0.5f;
 
-	/*CPolygon* pFrontFace = new CPolygon(4);
-	pFrontFace->SetVertex(0, CVertex(-fHalfWidth , +fHalfHeight, -fHalfDepth));
-	pFrontFace->SetVertex(1, CVertex(+fHalfWidth , +fHalfHeight, -fHalfDepth));
-	pFrontFace->SetVertex(2, CVertex(+fHalfWidth , -fHalfHeight, -fHalfDepth));
-	pFrontFace->SetVertex(3, CVertex(-fHalfWidth , -fHalfHeight, -fHalfDepth));
-	SetPolygon(0, pFrontFace);
-
-	CPolygon* pTopFace = new CPolygon(4);
-	pTopFace->SetVertex(0, CVertex(-fHalfWidth, +fHalfHeight, +fHalfDepth));
-	pTopFace->SetVertex(1, CVertex(+fHalfWidth, +fHalfHeight, +fHalfDepth));
-	pTopFace->SetVertex(2, CVertex(+fHalfWidth, +fHalfHeight, -fHalfDepth));
-	pTopFace->SetVertex(3, CVertex(-fHalfWidth, +fHalfHeight, -fHalfDepth));
-	SetPolygon(1, pTopFace);
-
-	CPolygon* pBackFace = new CPolygon(4);
-	pBackFace->SetVertex(0, CVertex(-fHalfWidth, -fHalfHeight, +fHalfDepth));
-	pBackFace->SetVertex(1, CVertex(+fHalfWidth, -fHalfHeight, +fHalfDepth));
-	pBackFace->SetVertex(2, CVertex(+fHalfWidth, +fHalfHeight, +fHalfDepth));
-	pBackFace->SetVertex(3, CVertex(-fHalfWidth, +fHalfHeight, +fHalfDepth));
-	SetPolygon(2, pBackFace);
-
-	CPolygon* pBottomFace = new CPolygon(4);
-	pBottomFace->SetVertex(0, CVertex(-fHalfWidth, -fHalfHeight, -fHalfDepth));
-	pBottomFace->SetVertex(1, CVertex(+fHalfWidth, -fHalfHeight, -fHalfDepth));
-	pBottomFace->SetVertex(2, CVertex(+fHalfWidth, -fHalfHeight, +fHalfDepth));
-	pBottomFace->SetVertex(3, CVertex(-fHalfWidth, -fHalfHeight, +fHalfDepth));
-	SetPolygon(3, pBottomFace);
-
-	CPolygon* pLeftFace = new CPolygon(4);
-	pLeftFace->SetVertex(0, CVertex(-fHalfWidth, +fHalfHeight, +fHalfDepth));
-	pLeftFace->SetVertex(1, CVertex(-fHalfWidth, +fHalfHeight, -fHalfDepth));
-	pLeftFace->SetVertex(2, CVertex(-fHalfWidth, -fHalfHeight, -fHalfDepth));
-	pLeftFace->SetVertex(3, CVertex(-fHalfWidth, -fHalfHeight, +fHalfDepth));
-	SetPolygon(4, pLeftFace);
-
-	CPolygon* pRightFace = new CPolygon(4);
-	pRightFace->SetVertex(0, CVertex(+fHalfWidth, +fHalfHeight, -fHalfDepth));
-	pRightFace->SetVertex(1, CVertex(+fHalfWidth, +fHalfHeight, +fHalfDepth));
-	pRightFace->SetVertex(2, CVertex(+fHalfWidth, -fHalfHeight, +fHalfDepth));
-	pRightFace->SetVertex(3, CVertex(+fHalfWidth, -fHalfHeight, -fHalfDepth));
-	SetPolygon(5, pRightFace);*/
-
 	//lattering
 	CPolygon* pFace = new CPolygon(18); // S의 앞면
 	pFace->SetVertex(0, CVertex(+25.0f, +7.5f, +fHalfDepth));
@@ -868,7 +831,7 @@ CStartMesh::CStartMesh(float fWidth, float fHeight, float fDepth) : CMesh(21)
 	pFace->SetVertex(18, CVertex(-15.0f, +10.0f, -fHalfDepth));
 	SetPolygon(20, pFace);
 
-	m_xmOOBB = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	m_xmOOBB = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(25.0f, 10.0f, 5.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
 
@@ -893,7 +856,7 @@ CSphereMesh::CSphereMesh(float fWidth, float fHeight, float fDepth)
 	}
 
 	m_xmOOBB = BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fHalfWidth, fHalfHeight, fHalfDepth), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
-
+	m_xmBSphere = BoundingSphere(XMFLOAT3(0.0f, 0.0f, 0.0f), 1.0f);
 }
 
 // obj 파일을 읽어들이는 함수
@@ -905,7 +868,6 @@ int Load_Object(const char* path, vector<pair<int, CPolygon*>>& pPolygon)
 	ifstream in(path);
 	if (!in) {
 		cerr << path << "파일 못찾음";
-		cout << "오류오류";
 		exit(1);
 	}
 

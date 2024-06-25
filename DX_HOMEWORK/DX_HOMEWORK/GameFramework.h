@@ -18,13 +18,13 @@ private:
 
 	RECT						m_rcClient;
 
-    HDC							m_hDCFrameBuffer = NULL;
-    HBITMAP						m_hBitmapFrameBuffer = NULL;
-    HBITMAP						m_hBitmapSelect = NULL;
+	HDC							m_hDCFrameBuffer = NULL;
+	HBITMAP						m_hBitmapFrameBuffer = NULL;
+	HBITMAP						m_hBitmapSelect = NULL;
 
-	CPlayer*					m_pPlayer = NULL;
-	CScene*						m_pScene = NULL;
-	CGameObject*				m_pLockedObject = NULL;
+	CPlayer* m_pPlayer = NULL;
+	CScene* m_pScene = NULL;
+	CGameObject* m_pLockedObject = NULL;
 
 	CGameTimer					m_GameTimer;
 
@@ -33,6 +33,8 @@ private:
 	_TCHAR						m_pszFrameRate[50];
 
 public:
+	bool DO_Change_Scene{ false };
+	int Last_Score{ 0 };
 	void OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
 
@@ -53,5 +55,8 @@ public:
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	void SetActive(bool bActive) { m_bActive = bActive; }
+
+	void BuildPlayerandCamera();
+	void Check_Scene_Change();
 };
 

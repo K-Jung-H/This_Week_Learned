@@ -9,8 +9,10 @@ class CScene
 public:
 	CScene(CPlayer *pPlayer);
 	virtual ~CScene();
-	bool GameStart = false;
-	bool Start_Value = false;
+	int GameMode{ 0 }; // 0. Ready, 1. Game, 2. Else
+	float Score{ 0 };
+	int Last_Score{ 0 };
+	
 private:
 	int							m_nObjects = 0;
 	CGameObject					**m_ppObjects = NULL;
@@ -33,6 +35,9 @@ public:
 	void CheckPlayerByWallCollision();
 	void CheckObjectByBulletCollisions();
 
+	void CheckPlayerByBulletCollisions();
+	void CheckBarrierByBulletCollisions();
+
 	virtual void Animate(float fElapsedTime);
 	virtual void Render(HDC hDCFrameBuffer, CCamera* pCamera);
 
@@ -42,5 +47,6 @@ public:
 	CGameObject* PickObjectPointedByCursor(int xClient, int yClient, CCamera* pCamera);
 
 
-	XMFLOAT3 Get_Player_Pos();
+	bool Get_Start();
+	bool Get_End();
 };

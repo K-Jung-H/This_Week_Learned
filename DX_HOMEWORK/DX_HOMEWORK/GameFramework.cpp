@@ -65,6 +65,13 @@ void CGameFramework::PresentFrameBuffer()
 
 void CGameFramework::BuildObjects()
 {
+	BuildPlayerandCamera();
+	m_pScene = new CScene(m_pPlayer);
+	m_pScene->ReadyObjects();
+}
+
+void CGameFramework::BuildPlayerandCamera()
+{
 	CCamera* pCamera = new CCamera();
 	pCamera->SetViewport(0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
 	pCamera->GeneratePerspectiveProjectionMatrix(1.01f, 500.0f, 60.0f);
@@ -73,18 +80,14 @@ void CGameFramework::BuildObjects()
 	pCamera->GenerateOrthographicProjectionMatrix(1.01f, 50.0f, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
 
 	CAirplaneMesh* pAirplaneMesh = new CAirplaneMesh(6.0f, 6.0f, 1.0f);
-
 	m_pPlayer = new CAirplanePlayer();
-	m_pPlayer->SetPosition(0.0f, 0.0f, -30.0f);
+	m_pPlayer->SetPosition(0.0f, 0.0f, -60.0f);
 	m_pPlayer->SetMesh(pAirplaneMesh);
-	m_pPlayer->SetColor(RGB(0, 0, 255));
+	m_pPlayer->SetColor(RGB(50, 50, 255));
 	m_pPlayer->SetCamera(pCamera);
 	m_pPlayer->SetCameraOffset(XMFLOAT3(0.0f, 5.0f, -15.0f));
-
-	m_pScene = new CScene(m_pPlayer);
-//	m_pScene->ReadyObjects();
-	m_pScene->BuildObjects(); 
 }
+
 
 void CGameFramework::ReleaseObjects()
 {
@@ -97,20 +100,7 @@ void CGameFramework::ReleaseObjects()
 	if (m_pPlayer) delete m_pPlayer;
 }
 
-void CGameFramework::Change_Scene() // 씬 변경에서 게임 시작하게 만들기
-{
-	if (m_pScene)
-	{
-		m_pScene->ReleaseObjects();
-		delete m_pScene;
 
-		m_pScene->GameStart = true;
-
-		m_pScene = NULL;
-		m_pScene = new CScene(m_pPlayer);
-		m_pScene->BuildObjects();
-	}		
-}
 
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -126,7 +116,7 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 		if (nMessageID == WM_RBUTTONDOWN)
 		{
 			m_pLockedObject = m_pScene->PickObjectPointedByCursor(LOWORD(lParam), HIWORD(lParam), m_pPlayer->m_pCamera);
-			if (m_pLockedObject) m_pLockedObject->SetColor(RGB(0, 0, 0));
+			if (m_pLockedObject) m_pLockedObject->SetColor(RGB(0, 255, 0));
 		}
 		break;
 	case WM_LBUTTONUP:
@@ -158,16 +148,19 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			((CAirplanePlayer*)m_pPlayer)->FireBullet(m_pLockedObject);
 			m_pLockedObject = NULL;
 			break;
+
 		case VK_TAB:
+			DO_Change_Scene = true;
 			break;
-		case VK_SPACE:
-			((CAirplanePlayer*)m_pPlayer)->m_pBarrier->SetActive(true);
-			break;
+
+
+
 		default:
 			m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			break;
 		}
 		break;
+
 	default:
 		break;
 	}
@@ -240,15 +233,10 @@ void CGameFramework::ProcessInput()
 
 void CGameFramework::AnimateObjects()
 {
+	Check_Scene_Change();
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	if (m_pScene) m_pScene->Animate(fTimeElapsed);
-
-	if (m_pScene->Start_Value && !m_pScene->GameStart)
-	{
-		Change_Scene();
-		m_pScene->GameStart = true;
-	}
 }
 
 void CGameFramework::FrameAdvance()
@@ -259,7 +247,7 @@ void CGameFramework::FrameAdvance()
 
 	AnimateObjects();
 
-    ClearFrameBuffer(RGB(255, 255, 255));
+    ClearFrameBuffer(RGB(0, 0, 0));
 
 	CCamera* pCamera = m_pPlayer->GetCamera();
 	if (m_pScene) m_pScene->Render(m_hDCFrameBuffer, pCamera);
@@ -270,4 +258,60 @@ void CGameFramework::FrameAdvance()
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
+void CGameFramework::Change_Scene() // 씬 변경에서 게임 시작하게 만들기
+{
+	if (m_pScene && m_pScene->GameMode == 0)
+	{
+		delete m_pPlayer;
+		BuildPlayerandCamera();
 
+		m_pScene->ReleaseObjects();
+		delete m_pScene;
+		m_pScene = NULL;
+		m_pScene = new CScene(m_pPlayer);
+		m_pScene->BuildObjects();
+	}
+	else if (m_pScene && m_pScene->GameMode == 1)
+	{
+		delete m_pPlayer;
+		BuildPlayerandCamera();
+
+		m_pScene->ReleaseObjects();
+		delete m_pScene;
+		m_pScene = NULL;
+		m_pScene = new CScene(m_pPlayer);
+		m_pScene->ReadyObjects();
+	}
+}
+
+void CGameFramework::Check_Scene_Change()
+{
+	if (DO_Change_Scene)
+	{
+		if (m_pScene->GameMode == 0)
+		{
+			Change_Scene();
+			m_pScene->GameMode = 1;
+			DO_Change_Scene = false;
+		}
+		else if (m_pScene->GameMode == 1)
+		{
+			Last_Score = m_pScene->Score;
+			Change_Scene();
+			m_pScene->Last_Score = Last_Score;
+			m_pScene->GameMode = 0;
+			DO_Change_Scene = false;
+		}
+	}
+	else
+	{
+		if (m_pScene->GameMode == 0)
+		{
+			DO_Change_Scene = m_pScene->Get_Start();
+		}
+		else if (m_pScene->GameMode == 1)
+		{
+			DO_Change_Scene = m_pScene->Get_End();
+		}
+	}
+}

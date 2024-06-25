@@ -48,7 +48,7 @@ protected:
 
 public:
 	BoundingOrientedBox			m_xmOOBB = BoundingOrientedBox();
-
+	BoundingSphere			m_xmBSphere = BoundingSphere();
 public:
 	void SetPolygon(int nIndex, CPolygon *pPolygon);
 

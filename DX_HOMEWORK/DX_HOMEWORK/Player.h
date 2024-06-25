@@ -57,16 +57,41 @@ class CAirplanePlayer : public CPlayer
 public:
 	CAirplanePlayer();
 	virtual ~CAirplanePlayer();
-
+	float Life{ 10 };
 	float						m_fBulletEffectiveRange = 150.0f;
 	CBulletObject*				m_ppBullets[BULLETS];
 	
 	CBarrierObject* m_pBarrier;
+
+
+	bool						m_bBlowingUp = false;
+
+	XMFLOAT4X4					m_pxmf4x4Transforms[EXPLOSION_DEBRISES];
+
+	float						m_fElapsedTimes = 0.0f;
+	float						m_fDuration = 2.0f;
+	float						m_fExplosionSpeed = 10.0f;
+	float						m_fExplosionRotation = 720.0f;
+
+	bool						m_Armored = false;
+	float						m_aElapsedTimes = 2.0f;
+
+	static CMesh* m_pExplosionMesh;
+	static XMFLOAT3				m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
+
 
 	void FireBullet(CGameObject* pLockedObject);
 
 	virtual void OnUpdateTransform();
 	virtual void Animate(float fElapsedTime);
 	virtual void Render(HDC hDCFrameBuffer, CCamera* pCamera);
+
+	static void PrepareExplosion();
+
+
+	void Armored(float fElapsedTime);
 };
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//
