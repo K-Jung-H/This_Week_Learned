@@ -98,8 +98,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Light.hlsl" />
     <FxCompile Include="Shaders.hlsl" />
-    <FxCompile Include="UI.hlsl" />
   </ItemGroup>
 </Project>
