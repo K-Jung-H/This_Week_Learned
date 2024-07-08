@@ -133,7 +133,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pBoards->SetPosition(0.0f, 0.0f, 0.0f);
 	m_pBoards->SetMesh(pboard);
 	m_pBoards->m_xmOOBB = m_pBoards->m_pMesh->m_xmBoundingBox; // 시작할 때 한번만 하면 됨
-	m_pShaders[0].AddObjects(m_pBoards);
+	//m_pShaders[0].AddObjects(m_pBoards);
 
 	CSphereMeshDiffused* pWhiteStoneMesh = new CSphereMeshDiffused(pd3dDevice, pd3dCommandList, 6.0f, 20, 20, false);
 	std::vector<XMFLOAT3> w_stone_pos_list;
@@ -170,7 +170,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_uiShaders = new UIShader[m_n_uiShaders];
 	m_uiShaders[0].CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature);
 
-	CMesh* pAirplaneMesh = new CAirplaneMeshDiffused(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 4.0f, XMFLOAT4(0.0f, 0.5f, 0.0f, 0.0f));
+	CMesh* pAirplaneMesh = new CCubeMeshDiffused(pd3dDevice, pd3dCommandList, 8.0f, 2.0f, 0.0f, XMFLOAT4(0.0f, 0.5f, 0.0f, 0.0f));
 	
 	CGameObject* ui_sample = NULL;
 	ui_sample = new CGameObject();
@@ -186,25 +186,30 @@ void CScene::ReleaseObjects()
 		m_pd3dGraphicsRootSignature->Release();
 
 
-	for (int i = 0; i < m_nShaders; i++)
+	for (int j = 0; j < m_nShaders; ++j)
 	{
-		m_pShaders[i].ReleaseShaderVariables();
+		m_pShaders[j].ReleaseShaderVariables();
+		m_pShaders[j].ReleaseObjects();
 	}
+
+	for (int j = 0; j < m_n_uiShaders; ++j)
+	{
+		m_uiShaders[j].ReleaseShaderVariables();
+		m_uiShaders[j].ReleaseObjects();
+	}
+
 
 	if (m_pShaders)
 		delete[] m_pShaders;
 
-
-	for (int i = 0; i < m_nGameObjects; i++)
-		m_ppGameObjects[i]->Release();
-
-
+	if (m_uiShaders)
+		delete[] m_uiShaders;
 }
 
 void CScene::ReleaseUploadBuffers()
 {
-	for (int j = 0; j < m_nGameObjects; j++)
-		m_ppGameObjects[j]->ReleaseUploadBuffers();
+	for (int j = 0; j < m_nShaders; ++j)
+		m_pShaders[j].ReleaseUploadBuffers();
 }
 
 
@@ -215,13 +220,11 @@ ID3D12RootSignature* CScene::GetGraphicsRootSignature()
 	return(m_pd3dGraphicsRootSignature);
 }
 
-bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM
-	lParam)
+bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	return(false);
 }
-bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
-	LPARAM lParam)
+bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	return(false);
 }
@@ -272,187 +275,184 @@ ID3D12RootSignature* CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevic
 	
 	return(pd3dGraphicsRootSignature);
 }
-//
-//void CScene::CheckObjectByObjectCollisions()
-//{
-//	// 충돌 객체 초기화
-//	for (int i = 0; i < m_nGameObjects; i++)
-//		m_ppGameObjects[i]->m_pObjectCollided = NULL;
-//
-//	// 충돌 체크 및 충돌 객체 설정
-//	for (int i = 0; i < m_nGameObjects; i++)
-//	{
-//		if (m_ppGameObjects[i]->m_bActive)
-//		{
-//			for (int j = (i + 1); j < m_nGameObjects; j++)
-//			{
-//				if (m_ppGameObjects[j]->m_bActive)
-//				{
-//					if (m_ppGameObjects[i]->m_xmOOSP.Intersects(m_ppGameObjects[j]->m_xmOOSP))
-//					{
-//						m_ppGameObjects[i]->m_pObjectCollided = m_ppGameObjects[j];
-//						m_ppGameObjects[j]->m_pObjectCollided = m_ppGameObjects[i];
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	// 충돌 처리
-//	for (int i = 0; i < m_nGameObjects; i++)
-//	{
-//		if (m_ppGameObjects[i]->m_pObjectCollided)
-//		{
-//			auto* bumped_stone1 = m_ppGameObjects[i];
-//			auto* bumped_stone2 = bumped_stone1->m_pObjectCollided;
-//
-//			XMFLOAT3 pos1 = bumped_stone1->GetPosition();
-//			XMFLOAT3 pos2 = bumped_stone2->GetPosition();
-//
-//			XMVECTOR vel1 = XMLoadFloat3(&bumped_stone1->m_xmf3MovingDirection) * bumped_stone1->m_fMovingSpeed;
-//			XMVECTOR vel2 = XMLoadFloat3(&bumped_stone2->m_xmf3MovingDirection) * bumped_stone2->m_fMovingSpeed;
-//
-//			// 충돌 방향 계산
-//			XMFLOAT3 Diff_Pos = XMFLOAT3(pos2.x - pos1.x, pos2.y - pos1.y, pos2.z - pos1.z);
-//			XMVECTOR Diff_Vec = XMLoadFloat3(&Diff_Pos);
-//			Diff_Vec = XMVector3Normalize(Diff_Vec); // 충돌 방향 정규화
-//
-//			// 속도 차이 계산
-//			XMVECTOR vel_Diff_Vec = vel2 - vel1;
-//
-//			// 충격량 계산
-//			float Power = XMVectorGetX(XMVector3Dot(vel_Diff_Vec, Diff_Vec));
-//			XMVECTOR Bump_Vec = Power * Diff_Vec;
-//
-//
-//			XMVECTOR New_Speed1 = vel1 + Bump_Vec;
-//			XMVECTOR New_Speed2 = vel2 - Bump_Vec;
-//
-//	
-//			XMVECTOR Final_Vel1 = (New_Speed1 + vel2) / 2.0f;
-//			XMVECTOR Final_Vel2 = (New_Speed2 + vel1) / 2.0f;
-//
-//			XMFLOAT3 Final_Vel1_f, Final_Vel2_f;
-//			XMStoreFloat3(&Final_Vel1_f, Final_Vel1);
-//			XMStoreFloat3(&Final_Vel2_f, Final_Vel2);
-//
-//			// 속도 업뎃
-//			XMVECTOR Final_Vel1_v = XMLoadFloat3(&Final_Vel1_f);
-//			XMVECTOR Final_Vel2_v = XMLoadFloat3(&Final_Vel2_f);
-//
-//			Final_Vel1_v = XMVector3Normalize(Final_Vel1_v);
-//			Final_Vel2_v = XMVector3Normalize(Final_Vel2_v);
-//
-//			XMStoreFloat3(&bumped_stone1->m_xmf3MovingDirection, Final_Vel1_v);
-//			XMStoreFloat3(&bumped_stone2->m_xmf3MovingDirection, Final_Vel2_v);
-//
-//			bumped_stone1->m_fMovingSpeed = sqrt(Final_Vel1_f.x * Final_Vel1_f.x + Final_Vel1_f.y * Final_Vel1_f.y + Final_Vel1_f.z * Final_Vel1_f.z);
-//			bumped_stone2->m_fMovingSpeed = sqrt(Final_Vel2_f.x * Final_Vel2_f.x + Final_Vel2_f.y * Final_Vel2_f.y + Final_Vel2_f.z * Final_Vel2_f.z);
-//
-//
-//			bumped_stone1->m_pObjectCollided = NULL;
-//			bumped_stone2->m_pObjectCollided = NULL;
-//		}
-//	}
-//}
-//
-//
-//void CScene::CheckObject_Out_Board_Collisions()
-//{
-//	for (int i = 0; i < m_nGameObjects; i++)
-//	{
-//		if (!m_ppGameObjects[i]->m_bActive)
-//			continue;
-//		ContainmentType containType = m_pBoards->m_xmOOBB.Contains(m_ppGameObjects[i]->m_xmOOSP);
-//		switch (containType)
-//		{
-//		case DISJOINT:
-//		{
-//			CExplosiveObject* pExplosiveObject = (CExplosiveObject*)m_ppGameObjects[i];
-//			pExplosiveObject->SetMovingSpeed(0.0f);
-//			pExplosiveObject->m_bBlowingUp = true;
-//		}
-//		break;
-//
-//		case INTERSECTS:
-//		case CONTAINS:
-//			break;
-//		}
-//	}
-//}
-//
-//void CScene::Change_Turn()
-//{
-//	if (Player_Turn)
-//	{
-//		Player_Turn = false;
-//		Com_Turn = true;
-//		Com_Shot = false;
-//	}
-//	else if (Com_Turn)
-//	{
-//		Player_Turn = true;
-//		Player_Shot = false;
-//		Com_Turn = false;
-//	}
-//}
-//
-//bool CScene::Check_Turn()
-//{
-//	if (!Player_Shot && Player_Turn)
-//		return false;
-//
-//	if (!Com_Shot && Com_Turn)
-//		return false;
-//
-//	int stop_stone_n = 0;
-//	for (int i = 0; i < m_nGameObjects; i++)
-//	{
-//		if ((m_ppGameObjects[i]->m_bActive == false) || 0.1f >= m_ppGameObjects[i]->m_fMovingSpeed)
-//			stop_stone_n += 1;
-//	}
-//
-//	if (stop_stone_n == m_nGameObjects)
-//		return true;
-//	else
-//		return false;
-//	
-//}
-//
-//bool CScene::Check_GameOver()
-//{
-//	int dead_White_Stone = 0;
-//	int dead_Black_Stone = 0;
-//	for (int i = 0; i < m_nGameObjects; i++)
-//	{
-//		if (m_ppGameObjects[i]->m_bActive == false)
-//		{
-//			if (m_ppGameObjects[i]->player_team)
-//				dead_White_Stone += 1;
-//			else
-//				dead_Black_Stone += 1;
-//		}
-//	}
-//
-//	if (dead_White_Stone == 5 || dead_Black_Stone == 5)
-//		return true;
-//	else
-//		return false;
-//}
+
+void CScene::CheckObjectByObjectCollisions()
+{
+	// CShader 벡터의 참조를 임시 변수에 저장
+	auto& objshader_ptrs = m_pShaders[0].GetObjects();
+	int objs_N = objshader_ptrs.size();
+
+	// 충돌 객체 초기화
+	for (CGameObject* obj_ptr : objshader_ptrs)
+		obj_ptr->m_pObjectCollided = NULL;
+
+	// 충돌 체크 및 충돌 객체 설정
+	for (int i = 0; i < objs_N; ++i)
+	{
+		if (objshader_ptrs[i]->m_bActive)
+		{
+			for (int j = (i + 1); j < objs_N; ++j)
+			{
+				if (objshader_ptrs[j]->m_bActive)
+				{
+					if (objshader_ptrs[i]->m_xmOOSP.Intersects(objshader_ptrs[j]->m_xmOOSP))
+					{
+						objshader_ptrs[i]->m_pObjectCollided = objshader_ptrs[j];
+						objshader_ptrs[j]->m_pObjectCollided = objshader_ptrs[i];
+					}
+				}
+			}
+		}
+	}
+
+	// 충돌 처리
+	for (int i = 0; i < objs_N; i++)
+	{
+		if (objshader_ptrs[i]->m_pObjectCollided)
+		{
+			auto* bumped_stone1 = objshader_ptrs[i];
+			auto* bumped_stone2 = bumped_stone1->m_pObjectCollided;
+
+			XMFLOAT3 pos1 = bumped_stone1->GetPosition();
+			XMFLOAT3 pos2 = bumped_stone2->GetPosition();
+
+			XMVECTOR vel1 = XMLoadFloat3(&bumped_stone1->m_xmf3MovingDirection) * bumped_stone1->m_fMovingSpeed;
+			XMVECTOR vel2 = XMLoadFloat3(&bumped_stone2->m_xmf3MovingDirection) * bumped_stone2->m_fMovingSpeed;
+
+			// 충돌 방향 계산
+			XMFLOAT3 Diff_Pos = XMFLOAT3(pos2.x - pos1.x, pos2.y - pos1.y, pos2.z - pos1.z);
+			XMVECTOR Diff_Vec = XMLoadFloat3(&Diff_Pos);
+			Diff_Vec = XMVector3Normalize(Diff_Vec); // 충돌 방향 정규화
+
+			// 속도 차이 계산
+			XMVECTOR vel_Diff_Vec = vel2 - vel1;
+
+			// 충격량 계산
+			float Power = XMVectorGetX(XMVector3Dot(vel_Diff_Vec, Diff_Vec));
+			XMVECTOR Bump_Vec = Power * Diff_Vec;
+
+
+			XMVECTOR New_Speed1 = vel1 + Bump_Vec;
+			XMVECTOR New_Speed2 = vel2 - Bump_Vec;
+
+
+			XMVECTOR Final_Vel1 = (New_Speed1 + vel2) / 2.0f;
+			XMVECTOR Final_Vel2 = (New_Speed2 + vel1) / 2.0f;
+
+			XMFLOAT3 Final_Vel1_f, Final_Vel2_f;
+			XMStoreFloat3(&Final_Vel1_f, Final_Vel1);
+			XMStoreFloat3(&Final_Vel2_f, Final_Vel2);
+
+			// 속도 업뎃
+			XMVECTOR Final_Vel1_v = XMLoadFloat3(&Final_Vel1_f);
+			XMVECTOR Final_Vel2_v = XMLoadFloat3(&Final_Vel2_f);
+
+			Final_Vel1_v = XMVector3Normalize(Final_Vel1_v);
+			Final_Vel2_v = XMVector3Normalize(Final_Vel2_v);
+
+			XMStoreFloat3(&bumped_stone1->m_xmf3MovingDirection, Final_Vel1_v);
+			XMStoreFloat3(&bumped_stone2->m_xmf3MovingDirection, Final_Vel2_v);
+
+			bumped_stone1->m_fMovingSpeed = sqrt(Final_Vel1_f.x * Final_Vel1_f.x + Final_Vel1_f.y * Final_Vel1_f.y + Final_Vel1_f.z * Final_Vel1_f.z);
+			bumped_stone2->m_fMovingSpeed = sqrt(Final_Vel2_f.x * Final_Vel2_f.x + Final_Vel2_f.y * Final_Vel2_f.y + Final_Vel2_f.z * Final_Vel2_f.z);
+
+
+			bumped_stone1->m_pObjectCollided = NULL;
+			bumped_stone2->m_pObjectCollided = NULL;
+		}
+	}
+}
+
+void CScene::CheckObject_Out_Board_Collisions()
+{
+	// 충돌 객체 초기화
+	for (CGameObject* obj_ptr : m_pShaders[0].GetObjects())
+	{
+		if (!obj_ptr->m_bActive)
+			continue;
+		ContainmentType containType = m_pBoards->m_xmOOBB.Contains(obj_ptr->m_xmOOSP);
+		switch (containType)
+		{
+		case DISJOINT:
+		{
+			CExplosiveObject* pExplosiveObject = (CExplosiveObject*)obj_ptr;
+			pExplosiveObject->SetMovingSpeed(0.0f);
+			pExplosiveObject->m_bBlowingUp = true;
+		}
+		break;
+
+		case INTERSECTS:
+		case CONTAINS:
+			break;
+		}
+	}
+}
+
+
+void CScene::Change_Turn()
+{
+	if (Player_Turn)
+	{
+		Player_Turn = false;
+		Com_Turn = true;
+		Com_Shot = false;
+	}
+	else if (Com_Turn)
+	{
+		Player_Turn = true;
+		Player_Shot = false;
+		Com_Turn = false;
+	}
+}
+
+bool CScene::Check_Turn()
+{
+	if (!Player_Shot && Player_Turn)
+		return false;
+
+	if (!Com_Shot && Com_Turn)
+		return false;
+
+	int stop_stone_n = 0;
+
+	for (CGameObject* obj_ptr : m_pShaders[0].GetObjects())
+	{
+		if ((obj_ptr->m_bActive == false) || 0.1f >= obj_ptr->m_fMovingSpeed)
+			stop_stone_n += 1;
+	}
+
+	if (stop_stone_n == m_pShaders[0].GetObjects().size())
+		return true;
+	else
+		return false;
+	
+}
+
+bool CScene::Check_GameOver()
+{
+	int dead_White_Stone = 0;
+	int dead_Black_Stone = 0;
+	for (CGameObject* obj_ptr : m_pShaders[0].GetObjects())
+	{
+		if (obj_ptr->m_bActive == false)
+		{
+			if (obj_ptr->player_team)
+				dead_White_Stone += 1;
+			else
+				dead_Black_Stone += 1;
+		}
+	}
+
+	if (dead_White_Stone == 6 || dead_Black_Stone == 6)
+		return true;
+	else
+		return false;
+}
 
 
 void CScene::AnimateObjects(float fTimeElapsed)
 {
-	//for (int i = 0; i < m_nGameObjects; i++)
-	//{
-	//	m_ppGameObjects[i]->Animate(fTimeElapsed);
-	//	m_ppGameObjects[i]->UpdateFriction(fTimeElapsed);
-
-	//	if (m_pSelectedObject != m_ppGameObjects[i])
-	//	{
-	//		m_ppGameObjects[i]->picked = false;
-	//	}
-	//}
+	m_pShaders[0].AnimateObjects(fTimeElapsed);
 
 	((CAirplanePlayer*)m_pPlayer)->Animate(fTimeElapsed);
 }
@@ -468,13 +468,9 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCom
 		m_pShaders[i].Render(pd3dCommandList, pCamera); 
 	}
 
-	//m_pBoards->Render(pd3dCommandList, pCamera);
-
-	//for (int i = 0; i < m_nGameObjects; i++)
-	//{
-	//	if(m_ppGameObjects[i]->m_bActive)
-	//		m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
-	//}
+	// 보드는 Scene에서 관리 중
+	// 아직은 움직임이 없을꺼니까
+	m_pBoards->Render(pd3dCommandList, pCamera);
 
 	CAirplanePlayer* pPlayer = (CAirplanePlayer*)m_pPlayer;
 
@@ -485,8 +481,13 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCom
 		pPlayer->Render(pd3dCommandList, pCamera);
 	}
 }
-void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+
+void CScene::UI_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+	pCamera->UpdateShaderVariables(pd3dCommandList);
+
 	for (int i = 0; i < m_n_uiShaders; i++)
 	{
 		m_uiShaders[i].Render(pd3dCommandList, pCamera);
@@ -500,8 +501,8 @@ CGameObject* CScene::PickObjectPointedByCursor(int xClient, int yClient, CCamera
 	XMFLOAT4X4 xmf4x4Projection = pCamera->GetProjectionMatrix();
 	D3D12_VIEWPORT d3dViewport = pCamera->GetViewport();
 	XMFLOAT3 xmf3PickPosition;
-	/*화면 좌표계의 점 (xClient, yClient)를 화면 좌표 변환의 역변환과 투영 변환의 역변환을 한다. 
-	그 결과는 카메라 좌표계의 점이다. 투영 평면이 카메라에서 z-축으로 거리가 1이므로 z-좌표는 1로 설정한다.*/
+	// 화면 좌표계의 점 (xClient, yClient)를 화면 좌표 변환의 역변환과 투영 변환의 역변환을 한다. 
+	// 그 결과는 카메라 좌표계의 점이다. 투영 평면이 카메라에서 z-축으로 거리가 1이므로 z-좌표는 1로 설정한다.
 	xmf3PickPosition.x = (((2.0f * xClient) / d3dViewport.Width) - 1) / xmf4x4Projection._11;
 	xmf3PickPosition.y = -(((2.0f * yClient) / d3dViewport.Height) - 1) / xmf4x4Projection._22;
 	xmf3PickPosition.z = 1.0f;
@@ -509,7 +510,7 @@ CGameObject* CScene::PickObjectPointedByCursor(int xClient, int yClient, CCamera
 	float fHitDistance = FLT_MAX, fNearestHitDistance = FLT_MAX;
 	CGameObject* pIntersectedObject = NULL, * pNearestObject = NULL;
 
-	pIntersectedObject = PickObjectByRayIntersection(xmf3PickPosition,xmf4x4View, &fHitDistance);
+	pIntersectedObject = m_pShaders[0].PickObjectByRayIntersection(xmf3PickPosition, xmf4x4View, &fHitDistance);
 	if (pIntersectedObject && (fHitDistance < fNearestHitDistance))
 	{
 		fNearestHitDistance = fHitDistance;
@@ -517,26 +518,6 @@ CGameObject* CScene::PickObjectPointedByCursor(int xClient, int yClient, CCamera
 	}
 
 	return(pNearestObject);
-}
-
-
-CGameObject* CScene::PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfNearHitDistance)
-{
-	int nIntersected = 0;
-	*pfNearHitDistance = FLT_MAX;
-	float fHitDistance = FLT_MAX;
-	CGameObject* pSelectedObject = NULL;
-	for (int j = 0; j < m_nGameObjects; j++)
-	{
-		nIntersected = m_ppGameObjects[j]->PickObjectByRayIntersection(xmf3PickPosition,
-			xmf4x4View, &fHitDistance);
-		if ((nIntersected > 0) && (fHitDistance < *pfNearHitDistance))
-		{
-			*pfNearHitDistance = fHitDistance;
-			pSelectedObject = m_ppGameObjects[j];
-		}
-	}
-	return(pSelectedObject);
 }
 
 void CScene::Shoot_Stone()
@@ -574,18 +555,20 @@ void CScene::Shoot_Stone_Com()
 
 std::pair<StoneObject*, StoneObject*> CScene::Find_Nearest_Enemy_Stone()
 {
+
+
 	std::vector<StoneObject*>Living_C_Stone;
 	std::vector< StoneObject*>Living_Player_Stone;
-	for (int i = 0; i < m_nGameObjects; i++)
+	for (CGameObject* obj_ptr : m_pShaders[0].GetObjects())
 	{
-		if ((m_ppGameObjects[i]->m_bActive == true) && (m_ppGameObjects[i]->player_team == false))
+		if ((obj_ptr->m_bActive == true) && (obj_ptr->player_team == false))
 		{
-			StoneObject* com_stone = (StoneObject*)m_ppGameObjects[i];
+			StoneObject* com_stone = (StoneObject*)obj_ptr;
 			Living_C_Stone.push_back(com_stone);
 		}
-		else if ((m_ppGameObjects[i]->m_bActive == true) && (m_ppGameObjects[i]->player_team == true))
+		else if ((obj_ptr->m_bActive == true) && (obj_ptr->player_team == true))
 		{
-			StoneObject* player_stone = (StoneObject*)m_ppGameObjects[i];
+			StoneObject* player_stone = (StoneObject*)obj_ptr;
 			Living_Player_Stone.push_back(player_stone);
 		}
 	}

@@ -1,0 +1,12 @@
+﻿  Scene.cpp
+C:\Users\82108\source\repos\StoneShooting\StoneShooting\Scene.cpp(283,13): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/Scene.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\82108\source\repos\StoneShooting\StoneShooting\Scene.cpp(356,40): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/Scene.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\82108\source\repos\StoneShooting\StoneShooting\Scene.cpp(357,40): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/Scene.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\82108\source\repos\StoneShooting\StoneShooting\Scene.cpp(17,1): warning C4172: 지역 변수 또는 임시: random_D의 주소를 반환하고 있습니다.
+  StoneShooting.vcxproj -> C:\Users\82108\source\repos\StoneShooting\x64\Debug\StoneShooting.exe

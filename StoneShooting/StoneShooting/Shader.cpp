@@ -138,29 +138,6 @@ pszShaderName, LPCSTR pszShaderProfile, ID3DBlob** ppd3dShaderBlob)
 //그래픽스 파이프라인 상태 객체를 생성한다. 
 void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	//ID3DBlob* pd3dVertexShaderBlob = NULL, * pd3dPixelShaderBlob = NULL;
-	//D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineStateDesc;
-	//::ZeroMemory(&d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	//d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
-	//d3dPipelineStateDesc.VS = CreateVertexShader(&pd3dVertexShaderBlob);
-	//d3dPipelineStateDesc.PS = CreatePixelShader(&pd3dPixelShaderBlob);
-	//d3dPipelineStateDesc.RasterizerState = CreateRasterizerState();
-	//d3dPipelineStateDesc.BlendState = CreateBlendState();
-	//d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState();
-	//d3dPipelineStateDesc.InputLayout = CreateInputLayout();
-	//d3dPipelineStateDesc.SampleMask = UINT_MAX;
-	//d3dPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	//d3dPipelineStateDesc.NumRenderTargets = 1;
-	//d3dPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//d3dPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	//d3dPipelineStateDesc.SampleDesc.Count = 1;
-	//d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	//pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dPipelineStates[0]);
-	//if (pd3dVertexShaderBlob) pd3dVertexShaderBlob->Release();
-	//if (pd3dPixelShaderBlob) pd3dPixelShaderBlob->Release();
-	//if (d3dPipelineStateDesc.InputLayout.pInputElementDescs) 
-	//	delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
-
 	ID3DBlob* pd3dVertexShaderBlob = NULL, * pd3dPixelShaderBlob = NULL;
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineStateDesc;
 	::ZeroMemory(&d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
@@ -204,6 +181,12 @@ void CShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 	pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[0]);
 }
 
+void CShader::AddObjects(CGameObject* gameobject)
+{
+	m_ppObjects.push_back(gameobject);
+	m_nObjects += 1;
+}
+
 void CShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	OnPrepareRender(pd3dCommandList);
@@ -225,6 +208,50 @@ void CShader::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, X
 void CShader::ReleaseShaderVariables()
 {
 }
+
+void CShader::ReleaseUploadBuffers()
+{
+	if (0 < m_ppObjects.size())
+	{
+		for (CGameObject* obj_ptr : m_ppObjects)
+			obj_ptr->ReleaseUploadBuffers();
+	}
+}
+
+void CShader::ReleaseObjects()
+{
+	if (0 < m_ppObjects.size())
+	{
+		for (CGameObject* obj_ptr : m_ppObjects)
+			delete obj_ptr;
+		m_ppObjects.clear();
+	}
+}
+
+
+
+CGameObject* CShader::PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfNearHitDistance)
+{
+	int nIntersected = 0;
+	*pfNearHitDistance = FLT_MAX;
+	float fHitDistance = FLT_MAX;
+	CGameObject* pSelectedObject = NULL;
+	for(CGameObject* obj_ptr : m_ppObjects)
+	{
+		nIntersected = obj_ptr->PickObjectByRayIntersection(xmf3PickPosition, xmf4x4View, &fHitDistance);
+		if ((nIntersected > 0) && (fHitDistance < *pfNearHitDistance))
+		{
+			*pfNearHitDistance = fHitDistance;
+			pSelectedObject = obj_ptr;
+		}
+	}
+	return(pSelectedObject);
+}
+
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 CPlayerShader::CPlayerShader()
@@ -267,6 +294,15 @@ void CPlayerShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* 
 	CShader::CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
 }
 
+void CPlayerShader::ReleaseUploadBuffers()
+{
+
+}
+
+void CPlayerShader::ReleaseObjects()
+{
+
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -304,55 +340,81 @@ void CObjectsShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature*
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 	
 	CShader::CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
-
-	//m_ppObjects.resize(100);
 }
 
-void CObjectsShader::AddObjects(CGameObject* gameobject)
+void CObjectsShader::AnimateObjects(float fTimeElapsed) 
 {
-	//m_ppObjects = new CGameObject * [2];
-	m_ppObjects.push_back(gameobject);
-	m_nObjects += 1;
-}
-
-void CObjectsShader::ReleaseObjects() 
-{
-//	if (m_ppObjects)
-//	{
-//		for (int j = 0; j < m_nObjects; j++)
-//		{
-//			if (m_ppObjects[j]) delete m_ppObjects[j];
-//		}
-//		delete[] m_ppObjects;
-//	}
-}
-
-void CObjectsShader::AnimateObjects(float fTimeElapsed) // 사용 안함 Scene에서 모두 처리
-{
-	for (int j = 0; j < m_nObjects; j++)
+	for (CGameObject* obj_ptr : m_ppObjects)
 	{
-		m_ppObjects[j]->Animate(fTimeElapsed);
+		obj_ptr->Animate(fTimeElapsed);
+		obj_ptr->UpdateFriction(fTimeElapsed);
 	}
-}
-
-void CObjectsShader::ReleaseUploadBuffers() // 사용 안함 Scene에서 모두 처리
-{
-//	if (m_ppObjects)
-//	{
-//		for (int j = 0; j < m_nObjects; j++) 
-//			m_ppObjects[j]->ReleaseUploadBuffers();
-//	}
 }
 
 void CObjectsShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) 
 {
 	CShader::Render(pd3dCommandList, pCamera);
-	for (int j = 0; j < m_nObjects; j++)
+
+	for(CGameObject* obj_ptr : m_ppObjects)
 	{
-		if (m_ppObjects[j])
-		{
-			m_ppObjects[j]->Render(pd3dCommandList, pCamera);
-		}
+		if(obj_ptr != NULL && obj_ptr->m_bActive)
+			obj_ptr->Render(pd3dCommandList, pCamera);
 	}
 
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+UIShader::UIShader()
+{
+}
+UIShader::~UIShader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC UIShader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 2;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE UIShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSUI", "vs_5_1", ppd3dShaderBlob));
+}
+D3D12_SHADER_BYTECODE UIShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSDiffused", "ps_5_1", ppd3dShaderBlob));
+}
+
+void UIShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 2;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CShader::CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+}
+
+void UIShader::AnimateObjects(float fTimeElapsed) 
+{
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+		obj_ptr->Animate(fTimeElapsed);
+	}
+}
+
+void UIShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CShader::Render(pd3dCommandList, pCamera);
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+		if (obj_ptr != NULL)
+			obj_ptr->Render(pd3dCommandList, pCamera);
+	}
 }

@@ -19,7 +19,8 @@ public:
 	void AnimateObjects(float fTimeElapsed);
 	
 	void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
-	//void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void UI_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	
 	void ReleaseUploadBuffers();
 
 	//그래픽 루트 시그너쳐를 생성한다. 
@@ -29,12 +30,9 @@ public:
 
 	ID3D12RootSignature* GetGraphicsRootSignature();
 
-	//void CheckObjectByObjectCollisions();
-	//void CheckObject_Out_Board_Collisions();
-	//void CheckPlayerByWallCollision(DWORD camera_mode);
-	//void CheckObjectByBulletCollisions();
-	//void CheckPlayerByBulletCollisions();
-	//void CheckBarrierByBulletCollisions();
+	void CheckObjectByObjectCollisions();
+	void CheckObject_Out_Board_Collisions();
+
 
 
 	//씬의 모든 게임 객체들에 대한 마우스 픽킹을 수행한다. 
@@ -45,8 +43,10 @@ public:
 	void Setting_Stone(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CMesh* mesh, XMFLOAT3 pos, bool player_team);
 
 	void Shoot_Stone();
-	std::pair<StoneObject*, StoneObject*> Find_Nearest_Enemy_Stone();
 	void Shoot_Stone_Com();
+	
+	std::pair<StoneObject*, StoneObject*> Find_Nearest_Enemy_Stone();
+
 
 	void Change_Turn();
 	bool Check_Turn();

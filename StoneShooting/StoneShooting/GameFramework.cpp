@@ -350,7 +350,7 @@ void CGameFramework::BuildObjects()
 	m_pScene->m_pPlayer = m_pPlayer;
 
 	//===================================================
-	pUICamera = new UICamera(pUICamera);
+	pUICamera = new Stone_Camera(pUICamera);
 	pUICamera->SetViewport(FRAME_BUFFER_WIDTH * 0.75f, 0, FRAME_BUFFER_WIDTH * 0.25f, FRAME_BUFFER_HEIGHT * 0.15f, 0.0f, 1.0f);
 	pUICamera->SetScissorRect(FRAME_BUFFER_WIDTH * 0.75f, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT * 0.15f);
 	pUICamera->GenerateProjectionMatrix(1.0f, 500.0f, ASPECT_RATIO, 90.0f);
@@ -380,206 +380,26 @@ void CGameFramework::ReleaseObjects()
 }
 
 
-void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-	switch (nMessageID)
-	{
-	case WM_LBUTTONDOWN:
-	case WM_RBUTTONDOWN:
-		if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
-		{
-			//마우스 캡쳐를 하고 현재 마우스 위치를 가져온다.
-			m_pSelectedObject = m_pScene->PickObjectPointedByCursor(LOWORD(lParam), HIWORD(lParam), pMainCamera);
-			if (m_pSelectedObject != NULL && m_pSelectedObject != m_pScene->m_pSelectedObject)
-			{
-				if (m_pSelectedObject->player_team)
-				{
-					m_pScene->m_pSelectedObject = m_pSelectedObject;
-					m_pPlayer->SetPosition(m_pSelectedObject->GetPosition());
-
-					pMainCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
-				}
-			}
-		}
-		::SetCapture(hWnd);
-		::GetCursorPos(&m_ptOldCursorPos);
-		break;
-	case WM_LBUTTONUP:
-	case WM_RBUTTONUP:
-		//마우스 캡쳐를 해제한다.
-		::ReleaseCapture();
-		break;
-		case WM_MOUSEMOVE:
-			break;
-		default:
-			break;
-	}
-}
-
-void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-	switch (nMessageID)
-	{
-	case WM_KEYUP:
-		switch (wParam)
-		{
-		case VK_ESCAPE:
-			::PostQuitMessage(0);
-			break;
-
-		case VK_SPACE:
-			if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
-			{
-				if (m_pScene->m_pSelectedObject != NULL)
-				{
-					m_pScene->Shoot_Stone();
-					m_pScene->Player_Shot = true;
-					m_pSelectedObject = NULL;
-					m_pScene->m_pSelectedObject = NULL;
-					pMainCamera = m_pPlayer->ChangeCamera(TOP_VIEW_CAMERA, m_GameTimer.GetTimeElapsed());
-				}
-			}
-			break;
-
-		case VK_TAB:
-			Camera_First_Person_View = !Camera_First_Person_View;
-			if (Camera_First_Person_View)
-			{
-				if (m_pPlayer)
-					pMainCamera = m_pPlayer->ChangeCamera(STONE_CAMERA, m_GameTimer.GetTimeElapsed());
-			}
-			else
-			{
-				if (m_pPlayer)
-					pMainCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
-			}
-			break;
-
-		//case VK_F1: // 탑 뷰
-		//	if (m_pPlayer)
-		//		m_pCamera = m_pPlayer->ChangeCamera(TOP_VIEW_CAMERA, m_GameTimer.GetTimeElapsed());
-		//	break;
-
-		//case VK_F2: // 1인칭 전지적 돌 시점
-		//	if (m_pPlayer)
-		//		m_pCamera = m_pPlayer->ChangeCamera(STONE_CAMERA, m_GameTimer.GetTimeElapsed());
-		//	break;
-
-		//case VK_F3: // 3인칭 시점
-		//	if (m_pPlayer) 
-		//		m_pCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
-		//	break;
-
-		case VK_F8:
-			break;
-
-		case VK_F9:
-			ChangeSwapChainState();
-			break;
-		default:
-			break;
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-	switch (nMessageID)
-	{
-	case WM_SIZE:
-	{
-		m_nWndClientWidth = LOWORD(lParam);
-		m_nWndClientHeight = HIWORD(lParam);
-		break;
-	}
-	case WM_LBUTTONDOWN:
-	case WM_RBUTTONDOWN:
-	case WM_LBUTTONUP:
-	case WM_RBUTTONUP:
-	case WM_MOUSEMOVE:
-		OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-		break;
-	case WM_KEYDOWN:
-	case WM_KEYUP:
-		OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-		break;
-	}
-	return(0);
-}
-
-void CGameFramework::ProcessInput()
-{
-	static UCHAR pKeyBuffer[256];
-	DWORD dwDirection = 0;
-	/*키보드의 상태 정보를 반환한다. 화살표 키(‘→’, ‘←’, ‘↑’, ‘↓’)를 누르면 플레이어를 오른쪽/왼쪽(로컬 x-축), 앞/
-	뒤(로컬 z-축)로 이동한다. ‘Page Up’과 ‘Page Down’ 키를 누르면 플레이어를 위/아래(로컬 y-축)로 이동한다.*/
-	if (::GetKeyboardState(pKeyBuffer))
-	{
-		if (pKeyBuffer[VK_UP] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeyBuffer[VK_DOWN] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeyBuffer[VK_LEFT] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeyBuffer[VK_RIGHT] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeyBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeyBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
-	}
-	float cxDelta = 0.0f, cyDelta = 0.0f;
-	POINT ptCursorPos;
-	/*마우스를 캡쳐했으면 마우스가 얼마만큼 이동하였는 가를 계산한다. 
-	마우스 왼쪽 또는 오른쪽 버튼이 눌러질 때의 메시지(WM_LBUTTONDOWN, WM_RBUTTONDOWN)를 처리할 때 마우스를 캡쳐하였다. 
-	그러므로 마우스가 캡쳐된 것은 마우스 버튼이 눌려진 상태를 의미한다. 
-	마우스 버튼이 눌려진 상태에서 마우스를 좌우 또는 상하로 움직이면 플레이어를 x-축 또는 y-축으로 회전한다.*/
-	if (::GetCapture() == m_hWnd)
-	{
-		//마우스 커서를 화면에서 없앤다(보이지 않게 한다).
-		::SetCursor(NULL);
-		//현재 마우스 커서의 위치를 가져온다.
-		::GetCursorPos(&ptCursorPos);
-		//마우스 버튼이 눌린 상태에서 마우스가 움직인 양을 구한다.
-		cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-		cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-		//마우스 커서의 위치를 마우스가 눌려졌던 위치로 설정한다.
-		::SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
-	}
-	//마우스 또는 키 입력이 있으면 플레이어를 이동하거나(dwDirection) 회전한다(cxDelta 또는 cyDelta).
-	if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
-	{
-		if (cxDelta || cyDelta)
-		{
-			if (pKeyBuffer[VK_RBUTTON] & 0xF0)
-				m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-			else
-				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-		}
-		if (dwDirection)
-			m_pPlayer->Move(dwDirection, 500.0f * m_GameTimer.GetTimeElapsed(), true);
-
-	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-}
-
 
 void CGameFramework::AnimateObjects()
 {
-	//if (m_pScene->Check_GameOver())
-	//	::PostQuitMessage(0);
+	if (m_pScene->Check_GameOver())
+		::PostQuitMessage(0);
 
 
 	if (m_pScene)
 		m_pScene->AnimateObjects(m_GameTimer.GetTimeElapsed());
 		
-	//m_pScene->CheckObject_Out_Board_Collisions();
-	//m_pScene->CheckObjectByObjectCollisions();
+	m_pScene->CheckObject_Out_Board_Collisions();
+	m_pScene->CheckObjectByObjectCollisions();
 
 
 	if (m_pScene->Com_Turn && !m_pScene->Com_Shot)
 		if (m_pScene->Game_Over == false)
 			m_pScene->Shoot_Stone_Com();
 
-	//if (m_pScene->Check_Turn())
-	//	m_pScene->Change_Turn();
+	if (m_pScene->Check_Turn())
+		m_pScene->Change_Turn();
 	
 }
 
@@ -625,13 +445,16 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 	
+
 	if (m_pScene) 
 		m_pScene->Render(m_pd3dDevice, m_pd3dCommandList, pMainCamera);
+
 	if (m_pScene)
 		m_pScene->UI_Render(m_pd3dDevice, m_pd3dCommandList, pUICamera);
 
+
+
 #ifdef _WITH_PLAYER_TOP
-//렌더 타겟은 그대로 두고 깊이 버퍼를 1.0으로 지우고 플레이어를 렌더링하면 플레이어는 무조건 그려질 것이다.
 
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
@@ -713,3 +536,169 @@ void CGameFramework::ProcessSelectedObject(DWORD dwDirection, float cxDelta, flo
 		m_pSelectedObject->Rotate(cyDelta, cxDelta, 0.0f);
 	}
 }
+
+void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+		if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
+		{
+			//마우스 캡쳐를 하고 현재 마우스 위치를 가져온다.
+			m_pSelectedObject = m_pScene->PickObjectPointedByCursor(LOWORD(lParam), HIWORD(lParam), pMainCamera);
+			if (m_pSelectedObject != NULL && m_pSelectedObject != m_pScene->m_pSelectedObject)
+			{
+				if (m_pSelectedObject->player_team)
+				{
+					m_pScene->m_pSelectedObject = m_pSelectedObject;
+					m_pPlayer->SetPosition(m_pSelectedObject->GetPosition());
+
+					pMainCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
+				}
+			}
+		}
+		::SetCapture(hWnd);
+		::GetCursorPos(&m_ptOldCursorPos);
+		break;
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+		//마우스 캡쳐를 해제한다.
+		::ReleaseCapture();
+		break;
+	case WM_MOUSEMOVE:
+		break;
+	default:
+		break;
+	}
+}
+
+void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_KEYUP:
+		switch (wParam)
+		{
+		case VK_ESCAPE:
+			::PostQuitMessage(0);
+			break;
+
+		case VK_SPACE:
+			if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
+			{
+				if (m_pScene->m_pSelectedObject != NULL)
+				{
+					m_pScene->Shoot_Stone();
+					m_pScene->Player_Shot = true;
+					m_pSelectedObject = NULL;
+					m_pScene->m_pSelectedObject = NULL;
+					pMainCamera = m_pPlayer->ChangeCamera(TOP_VIEW_CAMERA, m_GameTimer.GetTimeElapsed());
+				}
+			}
+			break;
+
+		case VK_TAB:
+			Camera_First_Person_View = !Camera_First_Person_View;
+			if (Camera_First_Person_View)
+			{
+				if (m_pPlayer)
+					pMainCamera = m_pPlayer->ChangeCamera(STONE_CAMERA, m_GameTimer.GetTimeElapsed());
+			}
+			else
+			{
+				if (m_pPlayer)
+					pMainCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
+			}
+			break;
+
+		case VK_F8:
+			break;
+
+		case VK_F9:
+			ChangeSwapChainState();
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_SIZE:
+	{
+		m_nWndClientWidth = LOWORD(lParam);
+		m_nWndClientHeight = HIWORD(lParam);
+		break;
+	}
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_MOUSEMOVE:
+		OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+		break;
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+		OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+		break;
+	}
+	return(0);
+}
+
+void CGameFramework::ProcessInput()
+{
+	static UCHAR pKeyBuffer[256];
+	DWORD dwDirection = 0;
+	/*키보드의 상태 정보를 반환한다. 화살표 키(‘→’, ‘←’, ‘↑’, ‘↓’)를 누르면 플레이어를 오른쪽/왼쪽(로컬 x-축), 앞/
+	뒤(로컬 z-축)로 이동한다. ‘Page Up’과 ‘Page Down’ 키를 누르면 플레이어를 위/아래(로컬 y-축)로 이동한다.*/
+	if (::GetKeyboardState(pKeyBuffer))
+	{
+		if (pKeyBuffer[VK_UP] & 0xF0) dwDirection |= DIR_FORWARD;
+		if (pKeyBuffer[VK_DOWN] & 0xF0) dwDirection |= DIR_BACKWARD;
+		if (pKeyBuffer[VK_LEFT] & 0xF0) dwDirection |= DIR_LEFT;
+		if (pKeyBuffer[VK_RIGHT] & 0xF0) dwDirection |= DIR_RIGHT;
+		if (pKeyBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
+		if (pKeyBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
+	}
+	float cxDelta = 0.0f, cyDelta = 0.0f;
+	POINT ptCursorPos;
+	/*마우스를 캡쳐했으면 마우스가 얼마만큼 이동하였는 가를 계산한다.
+	마우스 왼쪽 또는 오른쪽 버튼이 눌러질 때의 메시지(WM_LBUTTONDOWN, WM_RBUTTONDOWN)를 처리할 때 마우스를 캡쳐하였다.
+	그러므로 마우스가 캡쳐된 것은 마우스 버튼이 눌려진 상태를 의미한다.
+	마우스 버튼이 눌려진 상태에서 마우스를 좌우 또는 상하로 움직이면 플레이어를 x-축 또는 y-축으로 회전한다.*/
+	if (::GetCapture() == m_hWnd)
+	{
+		//마우스 커서를 화면에서 없앤다(보이지 않게 한다).
+		::SetCursor(NULL);
+		//현재 마우스 커서의 위치를 가져온다.
+		::GetCursorPos(&ptCursorPos);
+		//마우스 버튼이 눌린 상태에서 마우스가 움직인 양을 구한다.
+		cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+		cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+		//마우스 커서의 위치를 마우스가 눌려졌던 위치로 설정한다.
+		::SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+	}
+	//마우스 또는 키 입력이 있으면 플레이어를 이동하거나(dwDirection) 회전한다(cxDelta 또는 cyDelta).
+	if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+	{
+		if (cxDelta || cyDelta)
+		{
+			if (pKeyBuffer[VK_RBUTTON] & 0xF0)
+				m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+			else
+				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+		}
+		if (dwDirection)
+			m_pPlayer->Move(dwDirection, 500.0f * m_GameTimer.GetTimeElapsed(), true);
+
+	}
+	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+}
+

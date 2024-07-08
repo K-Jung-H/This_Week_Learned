@@ -121,7 +121,7 @@ void CGameObject::OnPrepareRender()
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	//게임 객체가 카메라에 보이면 렌더링한다. // IsVisible(pCamera)
-	if (IsVisible(pCamera))
+	if (true)
 	{
 		UpdateShaderVariables(pd3dCommandList);
 		if (m_pShader) 
