@@ -6,6 +6,16 @@ class CCamera;
 
 class CShader;
 
+// 객체를 렌더링할 때 적용하는 상수 버퍼 데이터
+struct CB_GAMEOBJECT_INFO
+{
+	XMFLOAT4X4 m_xmf4x4World;
+
+	// 객체에 적용될 재질 번호
+	UINT m_nMaterial;
+};
+
+
 struct MATERIAL
 {
 	XMFLOAT4 m_xmf4Ambient;
