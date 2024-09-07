@@ -2,23 +2,6 @@
 #include "Player.h"
 #include "Shader.h"
 
-inline float pRandF(float fMin, float fMax)
-{
-	return(fMin + ((float)rand() / (float)RAND_MAX) * (fMax - fMin));
-}
-
-XMVECTOR pRandomUnitVectorOnSphere()
-{
-	XMVECTOR xmvOne = XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
-	XMVECTOR xmvZero = XMVectorZero();
-
-	while (true)
-	{
-		XMVECTOR v = XMVectorSet(RandF(-1.0f, 1.0f), RandF(-1.0f, 1.0f), RandF(-1.0f, 1.0f), 0.0f);
-		if (!XMVector3Greater(XMVector3LengthSq(v), xmvOne)) return(XMVector3Normalize(v));
-	}
-}
-
 
 CPlayer::CPlayer()
 {
@@ -41,26 +24,51 @@ CPlayer::CPlayer()
 
 CPlayer::~CPlayer()
 {
-	ReleaseShaderVariables();
+	Release_Shader_Resource();
 	if (m_pCamera) delete m_pCamera;
 }
 
-void CPlayer::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CPlayer::Create_Shader_Resource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	CGameObject::CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	if (m_pCamera) m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	UINT ncbElementBytes = ((sizeof(CB_PLAYER_INFO) + 255) & ~255); //256의 배수
+	m_pConstant_Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pConstant_Buffer->Map(0, NULL, (void**)&m_pMapped_player_info);
+
+	//========================================================================
+
+	if (m_pCamera) 
+		m_pCamera->Create_Shader_Resource(pd3dDevice, pd3dCommandList);
 }
 
-void CPlayer::ReleaseShaderVariables()
+void CPlayer::Update_Shader_Resource(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	CGameObject::ReleaseShaderVariables();
-	if (m_pCamera) m_pCamera->ReleaseShaderVariables();
+	XMFLOAT4X4 xmf4x4World;
+	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+	CB_PLAYER_INFO* pcbMappedPlayer = (CB_PLAYER_INFO*)(m_pMapped_player_info);
+	::memcpy(&pcbMappedPlayer->m_xmf4x4World, &xmf4x4World, sizeof(XMFLOAT4X4));
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pConstant_Buffer->GetGPUVirtualAddress();
+
+	pd3dCommandList->SetGraphicsRootConstantBufferView(0, d3dGpuVirtualAddress);
 }
 
-void CPlayer::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+void CPlayer::Release_Shader_Resource()
 {
-	CGameObject::UpdateShaderVariables(pd3dCommandList);
+	if (m_pConstant_Buffer)
+	{
+		m_pConstant_Buffer->Unmap(0, NULL);
+		m_pConstant_Buffer->Release();
+	}
+
+//========================================================================
+
+	if (m_pCamera) 
+		m_pCamera->Release_Shader_Resource();
 }
+
 
 /*플레이어의 위치를 변경하는 함수이다. 플레이어의 위치는 기본적으로 사용자가 플레이어를 이동하기 위한 키보드를
 누를 때 변경된다. 플레이어의 이동 방향(dwDirection)에 따라 플레이어를 fDistance 만큼 이동한다.*/
@@ -83,8 +91,7 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		if (dwDirection & DIR_UP) 
 			xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) 
-			xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up,
-			-fDistance);
+			xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
 		//플레이어를 현재 위치 벡터에서 xmf3Shift 벡터만큼 이동한다.
 		Move(xmf3Shift, bUpdateVelocity);
 	}
@@ -126,8 +133,7 @@ void CPlayer::Rotate(float x, float y, float z)
 
 		if (y != 0.0f)
 		{
-			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up),
-				XMConvertToRadians(y));
+			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
 			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
 			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
 		}
@@ -193,11 +199,13 @@ void CPlayer::Update(float fTimeElapsed)
 	if (nCameraMode == THIRD_PERSON_CAMERA) 
 		m_pCamera->SetLookAt(m_xmf3Position);
 
-	if(nCameraMode == TOP_VIEW_CAMERA)
-		m_pCamera->SetLookAt(XMFLOAT3(0.1f, 0.1f, 0.1f));
+	if (nCameraMode == TOP_VIEW_CAMERA)
+		m_pCamera->SetLookAt(m_pCamera->camera_focus);
+
 	//카메라의 카메라 변환 행렬을 다시 생성한다.
 	
 	m_pCamera->RegenerateViewMatrix();
+
 	/*플레이어의 속도 벡터가 마찰력 때문에 감속이 되어야 한다면 감속 벡터를 생성한다. 
 	속도 벡터의 반대 방향 벡터를 구하고 단위 벡터로 만든다. 마찰 계수를 시간에 비례하도록 하여 마찰력을 구한다. 
 	단위 벡터에 마찰력을 곱하여 감속 벡터를 구한다. 
@@ -219,7 +227,6 @@ CCamera* CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
 	{
 	case TOP_VIEW_CAMERA:
 		pNewCamera = new TOP_Camera(m_pCamera);
-
 		break;
 	case THIRD_PERSON_CAMERA:
 		pNewCamera = new CThirdPersonCamera(m_pCamera);
@@ -284,56 +291,32 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 	//카메라 모드가 3인칭이면 플레이어 객체를 렌더링한다.
 	if (nCameraMode == THIRD_PERSON_CAMERA)
 	{
-		CGameObject::Render(pd3dCommandList, pCamera);
+		CGameObject::Render(pd3dCommandList, pCamera, NULL);
 	}
 
 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
-
-XMFLOAT3 CAirplanePlayer::m_pxmf3SphereVectors[EXPLOSION_DEBRISES];
-CMesh* CAirplanePlayer::m_pExplosionMesh = NULL;
-
-void CAirplanePlayer::PrepareExplosion(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+Moving_Player::Moving_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	for (int i = 0; i < EXPLOSION_DEBRISES; i++) 
-		XMStoreFloat3(&m_pxmf3SphereVectors[i], pRandomUnitVectorOnSphere());
-
-	m_pExplosionMesh = new CCubeMeshDiffused(pd3dDevice, pd3dCommandList, 0.5f, 0.5f, 0.5f,
-	{ 0.0f, 0.8f, 0.0f, 1.0f }, { 0.0f, 0.7f, 0.0f, 1.0f });
-}
-
-
-CAirplanePlayer::CAirplanePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
-{
-	//비행기 메쉬를 생성한다.
-	CMesh* pAirplaneMesh = new CAirplaneMeshDiffused(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 4.0f, XMFLOAT4(0.0f, 0.5f, 0.0f, 0.0f));
-	SetMesh(pAirplaneMesh);
 
 	//플레이어의 카메라를 스페이스-쉽 카메라로 변경(생성)한다.
+	m_pCamera = new CCamera();
 
 	//플레이어를 위한 셰이더 변수를 생성한다.
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	Create_Shader_Resource(pd3dDevice, pd3dCommandList);
 
 	//플레이어의 위치를 설정한다.
 	SetPosition(XMFLOAT3(0.0f, 0.0f, -50.0f));
 
-	//플레이어(비행기) 메쉬를 렌더링할 때 사용할 셰이더를 생성한다.
-	CPlayerShader* pShader = new CPlayerShader();
-	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
-	SetShader(pShader);
-
 	m_pCamera = ChangeCamera(TOP_VIEW_CAMERA, 0.0f);
 
-	PrepareExplosion(pd3dDevice, pd3dCommandList);
-
-
 }
-CAirplanePlayer::~CAirplanePlayer()
+Moving_Player::~Moving_Player()
 {
 }
 
-void CAirplanePlayer::OnPrepareRender()
+void Moving_Player::OnPrepareRender()
 {
 	CPlayer::OnPrepareRender();
 	//비행기 모델을 그리기 전에 x-축으로 90도 회전한다.
@@ -342,12 +325,9 @@ void CAirplanePlayer::OnPrepareRender()
 	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
 }
 
-/*3인칭 카메라일 때 플레이어 메쉬를 로컬 x-축을 중심으로 +90도 회전하고 렌더링한다. 
-왜냐하면 비행기 모델 메쉬는 다음 그림과 같이 y-축 방향이 비행기의 앞쪽이 되도록 모델링이 되었기 때문이다. 
-그리고 이 메쉬를 카메라의 z-축 방향으로 향하도록 그릴 것이기 때문이다.*/
 
 //카메라를 변경할 때 호출되는 함수이다. nNewCameraMode는 새로 설정할 카메라 모드이다.
-CCamera* CAirplanePlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
+CCamera* Moving_Player::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 {
 	DWORD nCurrentCameraMode = (m_pCamera) ? m_pCamera->GetMode() : 0x00;
 	if (nCurrentCameraMode == nNewCameraMode) 
@@ -358,9 +338,9 @@ CCamera* CAirplanePlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 		//플레이어의 특성을 1인칭 카메라 모드에 맞게 변경한다. 중력은 적용하지 않는다.
 		SetFriction(0);
 		SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
-		SetMaxVelocityXZ(0);
-		SetMaxVelocityY(0);
-		SetPosition(XMFLOAT3(180.0f, 180.0f, 0.0f));
+		SetMaxVelocityXZ(2000);
+		SetMaxVelocityY(2000);
+		SetPosition(XMFLOAT3(150.0f, 200.0f, 0.0f));
 
 		m_pCamera = OnChangeCamera(TOP_VIEW_CAMERA, nCurrentCameraMode);
 		m_pCamera->SetTimeLag(0.0f);
@@ -409,66 +389,16 @@ CCamera* CAirplanePlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 
 
 
-void CAirplanePlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Moving_Player::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_bBlowingUp)
-	{
-		for (int i = 0; i < EXPLOSION_DEBRISES; i++)
-		{
-			XMFLOAT4X4 xmf4x4World;
-			XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_pxmf4x4Transforms[i])));
-
-			//객체의 월드 변환 행렬을 루트 상수(32-비트 값)를 통하여 셰이더 변수(상수 버퍼)로 복사한다.
-			pd3dCommandList->SetGraphicsRoot32BitConstants(0, 16, &xmf4x4World, 0);
-
-			if (m_pExplosionMesh)
-				m_pExplosionMesh->Render(pd3dCommandList);
-		}
-	}
-	else
-	{
-
-		CPlayer::Render(pd3dCommandList, pCamera);
-
-	}
+	CPlayer::Render(pd3dCommandList, pCamera);
 }
 
 
 
-void CAirplanePlayer::Animate(float fElapsedTime)
+void Moving_Player::Animate(float fElapsedTime)
 {
-	if (Life == 0)
-	{
-		m_bBlowingUp = true;
-	}
-
-	if (m_bBlowingUp)
-	{
-		m_fElapsedTimes += fElapsedTime;
-		if (m_fElapsedTimes <= m_fDuration)
-		{
-			XMFLOAT3 xmf3Position = GetPosition();
-			for (int i = 0; i < EXPLOSION_DEBRISES; i++)
-			{
-				m_pxmf4x4Transforms[i] = Matrix4x4::Identity();
-				m_pxmf4x4Transforms[i]._41 = xmf3Position.x + m_pxmf3SphereVectors[i].x * m_fExplosionSpeed * m_fElapsedTimes;
-				m_pxmf4x4Transforms[i]._42 = xmf3Position.y + m_pxmf3SphereVectors[i].y * m_fExplosionSpeed * m_fElapsedTimes;
-				m_pxmf4x4Transforms[i]._43 = xmf3Position.z + m_pxmf3SphereVectors[i].z * m_fExplosionSpeed * m_fElapsedTimes;
-				m_pxmf4x4Transforms[i] = Matrix4x4::Multiply(Matrix4x4::RotationAxis(m_pxmf3SphereVectors[i], m_fExplosionRotation * m_fElapsedTimes), m_pxmf4x4Transforms[i]);
-			}
-		}
-		else
-		{
-			game_over = true;
-			m_bBlowingUp = false;
-			m_fElapsedTimes = 0.0f;
-			Life = 3;
-		}
-	}
-	else
-	{
-		CPlayer::Animate(fElapsedTime);
-	}
+	CPlayer::Animate(fElapsedTime, NULL);
 
 }
 

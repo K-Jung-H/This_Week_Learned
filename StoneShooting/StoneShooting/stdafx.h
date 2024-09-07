@@ -8,6 +8,7 @@
 #pragma comment(lib, "dxgi.lib")
 
 #pragma comment(lib, "dxguid.lib")
+/*#pragma comment(lib, "DirectXTex.lib") */
 
 //========================DX2D=============start
 #pragma comment(lib, "d2d1.lib")
@@ -18,16 +19,11 @@
 
 #define FRAME_BUFFER_WIDTH 800
 #define FRAME_BUFFER_HEIGHT 600
+
+#define TEXTURES				6
+
  // #define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 #define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용을 Windows 헤더에서 제외합니다.
-
-#define MAX_LIGHTS 8 
-#define MAX_MATERIALS 8 
-#define POINT_LIGHT 1
-#define SPOT_LIGHT 2
-#define DIRECTIONAL_LIGHT 3
-
-#define RANDOM_COLOR XMFLOAT4(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 
 #define _WITH_DIRECT2D
 
@@ -67,27 +63,115 @@
 #include <DirectXCollision.h>
 
 
+
 //=======================C++================
 #include <random>
 #include <vector>
+#include <tuple>
+#include <variant>
+#include <algorithm>
+#include <unordered_map>
+
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
 using Microsoft::WRL::ComPtr;
 
+enum class Shader_Type {
+	Outline,
+	Object,
+	UI,
+	ETC
+};
+
+enum class Particle_Type {
+	Explosion,
+	Charge,
+	Firework,
+	Snow,
+	None,
+};
+
+enum class Resource_Buffer_Type
+{
+	GameObject_info,
+	Material_info,
+};
+
+enum class Object_Type
+{
+	Stone,
+	Board,
+	Particle,
+	Item,
+	ETC,
+	None,
+};
+
+enum class Item_Type
+{
+	Taunt,
+	Fire_Shot,
+	Double_Power,
+	Frozen_Time,
+	Max_Power,
+	Ghost,
+	ETC,
+	None,
+
+};
+
+enum class UI_Type
+{
+	Standard,
+	Bar,
+
+};
+
+#define RESOURCE_TEXTURE2D			0x01
+#define RESOURCE_TEXTURE2D_ARRAY	0x02	
+#define RESOURCE_TEXTURE2DARRAY		0x03
+#define RESOURCE_TEXTURE_CUBE		0x04
+#define RESOURCE_BUFFER				0x05
+
+#define RANDOM_COLOR XMFLOAT4(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
+
+
+
+#define Snow_Area_Radius 30.0f
+#define Item_Type_Num 8
+#define TURN_MAX_TIME 30
+#define TURN_DELAY 0
+
+#define MAX_LIGHTS 8 
+#define MAX_MATERIALS 8 
+#define POINT_LIGHT 1
+#define SPOT_LIGHT 2
+#define DIRECTIONAL_LIGHT 3
+
+#define EPSILON 1.0e-10f
+
+
+inline bool IsZero(float fValue) { return((fabsf(fValue) < EPSILON)); }
+inline bool IsEqual(float fA, float fB) { return(::IsZero(fA - fB)); }
+inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
+inline void Swap(float* pfS, float* pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
+
+
 extern std::default_random_engine dre;
 extern std::uniform_int_distribution<int> uid;
 
+extern ID3D12PipelineState* Connected_PSO;
+extern ID3D12RootSignature* Object_GraphicsRootSignature_ptr;
+extern ID3D12RootSignature* UI_GraphicsRootSignature_ptr;
 
 
-extern ID3D12Resource* CreateBufferResource(
-	ID3D12Device* pd3dDevice,
-	ID3D12GraphicsCommandList* pd3dCommandList, void* pData, 
-	UINT nBytes, 
-	D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, 
-	D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, 
-	ID3D12Resource** ppd3dUploadBuffer = NULL);
+extern UINT	gnCbvSrvDescriptorIncrementSize;
+
+extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+extern ID3D12Resource* CreateTextureResourceFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 // 디버그 메시지 출력함수
 extern void DebugOutput(const std::string& message);
@@ -199,6 +283,16 @@ namespace Vector3
 	{
 		return(TransformCoord(xmf3Vector, XMLoadFloat4x4(&xmmtx4x4Matrix)));
 	}
+
+	//3-차원 벡터가 영벡터인 가를 반환하는 함수이다.
+	inline bool IsZero(XMFLOAT3& xmf3Vector)
+	{
+		if (::IsZero(xmf3Vector.x) && ::IsZero(xmf3Vector.y) && ::IsZero(xmf3Vector.z))
+			return(true);
+		return(false);
+	}
+
+
 }
 
 
@@ -225,6 +319,7 @@ namespace Vector4
 		XMStoreFloat4(&xmf4Result, fScalar * XMLoadFloat4(&xmf4Vector));
 		return(xmf4Result);
 	}
+
 }
 //행렬의 연산
 namespace Matrix4x4

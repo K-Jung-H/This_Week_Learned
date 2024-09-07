@@ -6,9 +6,6 @@
 #include "Player.h"
 #include "UI.h"
 
-#define TURN_MAX_TIME 30
-#define TURN_DELAY 0
-
 class CGameFramework
 {
 private:
@@ -57,7 +54,7 @@ private:
 	//그래픽스 파이프라인 상태 객체에 대한 인터페이스 포인터이다.
 
 	ID3D12Fence* m_pd3dFence;
-//	UINT64 m_nFenceValue;
+
 	UINT64 m_nFenceValue[m_nSwapChainBuffers]; 
 	HANDLE m_hFenceEvent;
 	//펜스 인터페이스 포인터, 펜스의 값, 이벤트 핸들이다.
@@ -69,16 +66,6 @@ private:
 	//다음은 프레임 레이트를 주 윈도우의 캡션에 출력하기 위한 문자열이다.
 	_TCHAR m_pszFrameRate[50];
 
-	CScene* m_pScene;
-
-	CCamera* pMainCamera = NULL;
-
-	// 화면에 출력할 UI 리스트
-	std::vector<UICamera*> pUI_list;
-	int ui_num = 0;
-
-	float random_time = -1;
-	float sum_time = 0;
 private:
 	// DX2D전용
 #ifdef _WITH_DIRECT2D
@@ -94,29 +81,29 @@ private:
 
 	ID2D1SolidColorBrush* m_pd2dbrBackground = NULL;
 	ID2D1SolidColorBrush* m_pd2dbrBorder = NULL;
-	IDWriteTextFormat* m_pdwFont = NULL;
-	IDWriteTextLayout* m_pdwTextLayout = NULL;
 	ID2D1SolidColorBrush* m_pd2dbrText = NULL;
+
+	IDWriteTextFormat* m_pdw_Timer_Font = NULL;
+	IDWriteTextFormat* m_pdw_Message_Font = NULL;
+	IDWriteTextFormat* m_pdw_Inventory_Font = NULL;
+
+	IDWriteTextLayout* m_pdwTextLayout = NULL;
 #endif
 
 
 public:
+	std::vector<CScene*> scene_list;
+
+	Playing_Scene* Scene_Playing = NULL;
+	Start_Scene* Scene_Beginning = NULL;
+	CScene* rendering_scene = NULL;
+
 	//플레이어 객체에 대한 포인터이다.
-	CPlayer* m_pPlayer = NULL;
+	std::vector<CPlayer*> player_list;
+	CPlayer* rendering_player = NULL;
 
 	//마지막으로 마우스 버튼을 클릭할 때의 마우스 커서의 위치이다.
 	POINT m_ptOldCursorPos;
-
-	// 파워 게이지 값 저장변수
-	bool power_level = 0;
-
-	// 턴 시간 제한
-	float Limit_time = 0.0f;
-	
-	// 턴 넘김 시간 : 2초
-	float Delay_time = 0.0f;
-
-	bool Need_to_change_turn = false;
 
 public:
 
@@ -146,7 +133,7 @@ public:
 	//핵심 부분
 	//////////
 	void ProcessInput();
-	void AnimateObjects();
+	void Animate_Scene_Objects();
 	void FrameAdvance();
 	//프레임워크의 핵심(사용자 입력, 애니메이션, 렌더링)을 구성하는 함수이다.
 
@@ -164,12 +151,9 @@ public:
 	void MoveToNextFrame();
 
 	void ProcessSelectedObject(DWORD dwDirection, float cxDelta, float cyDelta);
-	CGameObject* m_pSelectedObject = NULL;
 
 	void CreateDirect2DDevice();
 
 
-	bool Camera_First_Person_View = false;
-	bool power_charge = false;
-	int power_degree = 0;
+
 };

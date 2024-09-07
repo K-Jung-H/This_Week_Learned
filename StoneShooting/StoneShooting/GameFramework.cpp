@@ -12,7 +12,7 @@ CGameFramework::CGameFramework()
 	m_pd3dPipelineState = NULL;
 	m_pd3dCommandList = NULL;
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++)
+	for (int i = 0; i < m_nSwapChainBuffers; ++i)
 		m_ppd3dRenderTargetBuffers[i] = NULL;
 	
 	m_pd3dRtvDescriptorHeap = NULL;
@@ -31,7 +31,7 @@ CGameFramework::CGameFramework()
 	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
 	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++)
+	for (int i = 0; i < m_nSwapChainBuffers; ++i)
 	{
 		m_nFenceValue[i] = 0;
 #ifdef _WITH_DIRECT2D
@@ -39,7 +39,8 @@ CGameFramework::CGameFramework()
 		m_ppd2dRenderTargets[i] = NULL;
 #endif
 	}
-	m_pScene = NULL;
+
+	Scene_Playing = NULL;
 
 	_tcscpy_s(m_pszFrameRate, _T("LapProject ("));
 }
@@ -104,7 +105,7 @@ void CGameFramework::OnDestroy()
 #ifdef _WITH_DIRECT2D
 	if (m_pd2dbrBackground) m_pd2dbrBackground->Release();
 	if (m_pd2dbrBorder) m_pd2dbrBorder->Release();
-	if (m_pdwFont) m_pdwFont->Release();
+	if (m_pdw_Timer_Font) m_pdw_Timer_Font->Release();
 	if (m_pdwTextLayout) m_pdwTextLayout->Release();
 	if (m_pd2dbrText) m_pd2dbrText->Release();
 
@@ -245,9 +246,11 @@ void CGameFramework::CreateDirect3DDevice()
 	//펜스와 동기화를 위한 이벤트 객체를 생성한다(이벤트 객체의 초기값을 FALSE이다).
 	//이벤트의 값을 자동적으로 FALSE가 되도록 생성한다.
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-	
-	
-	if (pd3dAdapter) pd3dAdapter->Release();
+		
+	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	if (pd3dAdapter) 
+		pd3dAdapter->Release();
 }
 
 #ifdef _WITH_DIRECT2D
@@ -304,14 +307,24 @@ void CGameFramework::CreateDirect2DDevice()
 	m_pd2dDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(0.3f, 0.0f, 0.0f, 0.5f), &m_pd2dbrBackground);
 	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF(0x9ACD32, 1.0f)), &m_pd2dbrBorder);
-	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f), &m_pd2dbrText);
+	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f), &m_pd2dbrText);
 
-	hResult = m_pdWriteFactory->CreateTextFormat(L"궁서체", NULL, DWRITE_FONT_WEIGHT_DEMI_BOLD, DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL, 48.0f, L"en-US", &m_pdwFont);
-	hResult = m_pdwFont->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-	hResult = m_pdwFont->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+	hResult = m_pdWriteFactory->CreateTextFormat(L"맑은 고딕", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 48.0f, L"ko-KR", &m_pdw_Timer_Font);
+	hResult = m_pdw_Timer_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdw_Timer_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
 	
+	hResult = m_pdWriteFactory->CreateTextFormat(L"맑은 고딕", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 40.0f, L"ko-KR", &m_pdw_Message_Font);
+	hResult = m_pdw_Message_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdw_Message_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
-	hResult = m_pdWriteFactory->CreateTextLayout(L"텍스트 레이아웃", 8, m_pdwFont, 4096.0f, 4096.0f, &m_pdwTextLayout);
+
+	hResult = m_pdWriteFactory->CreateTextFormat(L"맑은 고딕", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 30.0f, L"ko-KR", &m_pdw_Inventory_Font);
+	hResult = m_pdw_Inventory_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdw_Inventory_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+
 
 	float fDpi = (float)GetDpiForWindow(m_hWnd);
 	D2D1_BITMAP_PROPERTIES1 d2dBitmapProperties = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), fDpi, fDpi);
@@ -369,8 +382,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 		__uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dRtvDescriptorHeap);
 
 	//렌더 타겟 서술자 힙의 원소의 크기를 저장한다.
-	m_nRtvDescriptorIncrementSize =
-		m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_nRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 
 	//깊이-스텐실 서술자 힙(서술자 개수는 1)을 생성한다.
@@ -389,8 +401,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 
 void CGameFramework::CreateRenderTargetViews()
 {
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle =
-		m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	for (UINT i = 0; i < m_nSwapChainBuffers; i++)
 	{
 		m_pdxgiSwapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void**)&m_ppd3dRenderTargetBuffers[i]);
@@ -443,28 +454,34 @@ void CGameFramework::CreateDepthStencilView()
 void CGameFramework::BuildObjects()
 {
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
-
-	m_pScene = new CScene();
 	
-		if (m_pScene)
-			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	Moving_Player* player = new Moving_Player(m_pd3dDevice, m_pd3dCommandList);
+	player_list.push_back(player);
+
+	Scene_Playing = new Playing_Scene();
+	Scene_Playing->SetPlayer(player);
+	Scene_Playing->Add_Font(m_pdw_Timer_Font);
+	Scene_Playing->Add_Font(m_pdw_Inventory_Font);
+	Scene_Playing->Add_Brush(m_pd2dbrText);
+	scene_list.push_back(Scene_Playing);
+
+	Scene_Beginning = new Start_Scene();
+	Scene_Beginning->SetPlayer(player);
+	Scene_Beginning->Add_Font(m_pdw_Message_Font);
+	Scene_Beginning->Add_Brush(m_pd2dbrText);
+
+	scene_list.push_back(Scene_Beginning);
+
+
+	for (CScene* scene : scene_list)
+		scene->BuildScene(m_pd3dDevice, m_pd3dCommandList);
 
 	
-	CAirplanePlayer* pAirplanePlayer = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature());
+	
 
-	m_pPlayer = pAirplanePlayer;
-	pMainCamera = m_pPlayer->GetCamera();
-	m_pScene->m_pPlayer = m_pPlayer;
-
-	//===================================================
-
-	D3D12_RECT power_ui_area = { 600, 0, 800, 90 };
-	pUI_list.push_back(new BAR_UI(power_ui_area));
-
-	power_ui_area = { 0, 0, 200, 90 };
-	pUI_list.push_back(new BAR_UI(power_ui_area));
-
-	ui_num = pUI_list.size();
+	rendering_player = player;
+	rendering_scene = Scene_Beginning;
+	
 
 	//===================================================
 
@@ -474,97 +491,27 @@ void CGameFramework::BuildObjects()
 
 	WaitForGpuComplete();
 
-	if (m_pScene) 
-		m_pScene->ReleaseUploadBuffers();
+	for (CScene* scene : scene_list)
+		scene->ReleaseUploadBuffers();
 
 	m_GameTimer.Reset();
 }
 
-
 void CGameFramework::ReleaseObjects()
 {
-	if (m_pScene) 
-		m_pScene->ReleaseObjects();
-	if (m_pScene) 
-		delete m_pScene;
+	for (CScene* scene : scene_list)
+		scene->ReleaseObjects();
+
+	for (CScene* scene : scene_list)
+		delete scene;
+
+	scene_list.clear();
 }
 
-
-
-void CGameFramework::AnimateObjects()
+void CGameFramework::Animate_Scene_Objects()
 {
-	if (m_pScene->Check_GameOver())
-		::PostQuitMessage(0);
-
-
-	if (m_pScene)
-		m_pScene->AnimateObjects(m_GameTimer.GetTimeElapsed());
-	
-	// 턴 종료 체크
-	if (Limit_time > TURN_MAX_TIME)
-		Need_to_change_turn = true;
-	else if (!Need_to_change_turn)
-		Need_to_change_turn = m_pScene->Check_Turn();
-
-	if (Need_to_change_turn)
-	{
-		if (Delay_time >= TURN_DELAY)
-		{
-			Limit_time = 0.0f;
-			Delay_time = 0.0f;
-			Need_to_change_turn = false;
-			m_pScene->Change_Turn();
-		}
-		else
-			Delay_time += m_GameTimer.GetTimeElapsed();
-	}
-	else
-	{
-		Limit_time += m_GameTimer.GetTimeElapsed();
-	}
-
-
-
-	if (m_pScene->Player_Turn) // 플레이어 턴
-	{
-		pUI_list[0]->Active = true;
-		pUI_list[1]->Active = false;
-
-		power_degree = pUI_list[0]->Update(m_GameTimer.GetTimeElapsed(), power_charge);
-
-	}
-	else if (m_pScene->Com_Turn) // 컴퓨터 턴
-	{
-		pUI_list[0]->Active = false;
-		pUI_list[1]->Active = true;
-
-		if (!m_pScene->Com_Shot)
-		{
-			if(0.0f > random_time)
-				random_time = uid(dre) / 1000;
-
-			if (random_time < sum_time)
-			{
-				if (m_pScene->Game_Over == false)  // 필요한 조건인가
-				{
-					random_time = -1;
-					m_pScene->Shoot_Stone_Com(power_degree);
-					sum_time = 0;
-				}
-			}
-			else
-			{
-				power_degree = pUI_list[1]->Update(m_GameTimer.GetTimeElapsed(), true);
-				sum_time += m_GameTimer.GetTimeElapsed();
-			}
-		}
-	}
-	
-	m_pScene->CheckObject_Out_Board_Collisions();
-	m_pScene->CheckObjectByObjectCollisions();
-	m_pScene->Defend_Overlap();
-
-
+	if (rendering_scene)
+		rendering_scene->AnimateObjects(m_pd3dDevice, m_pd3dCommandList, m_GameTimer.GetTimeElapsed());
 }
 
 void CGameFramework::WaitForGpuComplete()
@@ -581,11 +528,11 @@ void CGameFramework::WaitForGpuComplete()
 
 void CGameFramework::FrameAdvance()
 {
-	m_GameTimer.Tick(0.0f);
+	m_GameTimer.Tick(60.0f); // 60프레임으로 고정하기
 	
 	ProcessInput();
 	
-	AnimateObjects();
+	Animate_Scene_Objects();
 	
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
@@ -605,18 +552,7 @@ void CGameFramework::FrameAdvance()
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
-	float* pfClearColor = new float[4] { 0.0f, 0.125f, 0.3f, 1.0f };
-	
-	if (m_pScene->Com_Turn) {
-		delete[] pfClearColor;  
-		pfClearColor = new float[4] { 0.2f, 0.2f, 0.2f, 0.0f };
-	}
-	else if (m_pScene->Player_Turn)
-	{
-		delete[] pfClearColor;
-		pfClearColor = new float[4] { 0.8f, 0.8f, 0.8f, 0.0f };
-	}
-
+	float* pfClearColor = rendering_scene->Get_BackGround_Color();
 
 	// 렌더 타겟 뷰, 깊이 버퍼 뷰 초기화
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -629,15 +565,9 @@ void CGameFramework::FrameAdvance()
 	
 
 	// D3D12 그리기 동작 시작
-	if (m_pScene) 
-		m_pScene->Render(m_pd3dDevice, m_pd3dCommandList, pMainCamera);
+	if (rendering_scene)
+		rendering_scene->Render(m_pd3dDevice, m_pd3dCommandList, rendering_player->GetCamera());
 
-	if (pUI_list.size())
-	{
-		for (UICamera* ui_ptr : pUI_list)
-			if(ui_ptr->Active)
-				m_pScene->UI_Render(m_pd3dDevice, m_pd3dCommandList, ui_ptr);
-	}
 	// D3D12 그리기 동작 끝
 
 
@@ -672,29 +602,9 @@ void CGameFramework::FrameAdvance()
 	// 출력 화면 크기
 	D2D1_SIZE_F szRenderTarget = m_ppd2dRenderTargets[m_nSwapChainBufferIndex]->GetSize();
 
-	// 플레이어 모은 파워 출력
-	if (pUI_list[0]->Active)
-	{
-		std::wstring wsPower = std::to_wstring(power_degree);
-		D2D1_RECT_F player_shooting_power = D2D1::RectF(500, 0, 600, 90);
-		m_pd2dDeviceContext->DrawTextW(wsPower.c_str(), (UINT32)wcslen(wsPower.c_str()), m_pdwFont, &player_shooting_power, m_pd2dbrText);
-	}
-
-	// COM의 모은 파워 출력
-	if (pUI_list[1]->Active)
-	{
-		std::wstring ws_COM_Power = std::to_wstring(power_degree);
-		D2D1_RECT_F COM_shooting_power = D2D1::RectF(200, 0, 300, 90);
-		m_pd2dDeviceContext->DrawTextW(ws_COM_Power.c_str(), (UINT32)wcslen(ws_COM_Power.c_str()), m_pdwFont, &COM_shooting_power, m_pd2dbrText);
-	}
-	
-
-	// 시간 제한 출력
-	std::wstring wsTimeLimit = std::to_wstring(TURN_MAX_TIME - static_cast<int>(Limit_time));
-	D2D1_RECT_F player_Time_Limit = D2D1::RectF(350, 0, 450, 100);
-	m_pd2dDeviceContext->DrawTextW(wsTimeLimit.c_str(), (UINT32)wcslen(wsTimeLimit.c_str()), m_pdwFont, &player_Time_Limit, m_pd2dbrText);
-
-	// 	m_pd2dDeviceContext->DrawTextW(L"한글 테스트", (UINT32)wcslen(L"한글 테스트"), m_pdwFont, &rcLowerText, m_pd2dbrText);
+	// 2D 문구 출력
+	if (rendering_scene)
+		rendering_scene->Message_Render(m_pd2dDeviceContext);
 	
 	m_pd2dDeviceContext->EndDraw();
 
@@ -769,20 +679,6 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::ProcessSelectedObject(DWORD dwDirection, float cxDelta, float cyDelta)
 {
-	//픽킹으로 선택한 게임 객체가 있으면 키보드를 누르거나 마우스를 움직이면 게임 개체를 이동 또는 회전한다. 
-	if (dwDirection != 0)
-	{
-		if (dwDirection & DIR_FORWARD) m_pSelectedObject->MoveForward(+1.0f);
-		if (dwDirection & DIR_BACKWARD) m_pSelectedObject->MoveForward(-1.0f);
-		if (dwDirection & DIR_LEFT) m_pSelectedObject->MoveStrafe(+1.0f);
-		if (dwDirection & DIR_RIGHT) m_pSelectedObject->MoveStrafe(-1.0f);
-		if (dwDirection & DIR_UP) m_pSelectedObject->MoveUp(+1.0f);
-		if (dwDirection & DIR_DOWN) m_pSelectedObject->MoveUp(-1.0f);
-	}
-	else if ((cxDelta != 0.0f) || (cyDelta != 0.0f))
-	{
-		m_pSelectedObject->Rotate(cyDelta, cxDelta, 0.0f);
-	}
 }
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -791,21 +687,6 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	{
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
-		if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
-		{
-			//마우스 캡쳐를 하고 현재 마우스 위치를 가져온다.
-			m_pSelectedObject = m_pScene->PickObjectPointedByCursor(LOWORD(lParam), HIWORD(lParam), pMainCamera);
-			if (m_pSelectedObject != NULL && m_pSelectedObject != m_pScene->m_pSelectedObject)
-			{
-				if (m_pSelectedObject->player_team)
-				{
-					m_pScene->m_pSelectedObject = m_pSelectedObject;
-					m_pPlayer->SetPosition(m_pSelectedObject->GetPosition());
-
-					pMainCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
-				}
-			}
-		}
 		::SetCapture(hWnd);
 		::GetCursorPos(&m_ptOldCursorPos);
 		break;
@@ -829,13 +710,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		switch (wParam)
 		{
 		case VK_SPACE:
-			if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
-			{
-				power_charge = true;
-			}
 			break;
-
-
 		default:
 			break;
 		}
@@ -843,52 +718,17 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 	case WM_KEYUP:
 		switch (wParam)
 		{
-		case VK_ESCAPE:
-			::PostQuitMessage(0);
-			break;
-
-		case VK_SPACE:
-			power_charge = false;
-			pUI_list[0]->Reset();
-			pUI_list[1]->Reset();
-			if (m_pScene->Player_Turn && m_pScene->Player_Shot == false)
-			{
-				if (m_pScene->m_pSelectedObject != NULL)
-				{
-					power_charge = false;
-					m_pScene->Shoot_Stone(power_degree);
-					m_pScene->Player_Shot = true;
-					m_pSelectedObject = NULL;
-					m_pScene->m_pSelectedObject = NULL;
-					pMainCamera = m_pPlayer->ChangeCamera(TOP_VIEW_CAMERA, m_GameTimer.GetTimeElapsed());
-				}
-			}
-			break;
-
 		case VK_TAB:
-			if (m_pScene->m_pSelectedObject)
-			{
-				Camera_First_Person_View = !Camera_First_Person_View;
-				if (Camera_First_Person_View)
-				{
-					if (m_pPlayer)
-						pMainCamera = m_pPlayer->ChangeCamera(STONE_CAMERA, m_GameTimer.GetTimeElapsed());
-				}
-				else
-				{
-					if (m_pPlayer)
-						pMainCamera = m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, m_GameTimer.GetTimeElapsed());
-				}
-			}
-			break;
-
-		case VK_F8:
+			rendering_scene = Scene_Playing;
 			break;
 
 		case VK_F9:
 			ChangeSwapChainState();
 			break;
 
+		case VK_ESCAPE:
+			::PostQuitMessage(0);
+			break;
 		default:
 			break;
 		}
@@ -913,13 +753,15 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
 	case WM_MOUSEMOVE:
+	case WM_MOUSEWHEEL:
 		OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-		m_pScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+		rendering_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam); 
 		break;
+
 	case WM_KEYDOWN:
 	case WM_KEYUP:
 		OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-		m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+		rendering_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 		break;
 	}
 	return(0);
@@ -927,21 +769,14 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::ProcessInput()
 {
-	static UCHAR pKeyBuffer[256];
+	static UCHAR pKeysBuffer[256];
+
+	if (!rendering_scene && !rendering_player)
+		return;
+
 	DWORD dwDirection = 0;
-	/*키보드의 상태 정보를 반환한다. 화살표 키(‘→’, ‘←’, ‘↑’, ‘↓’)를 누르면 플레이어를 오른쪽/왼쪽(로컬 x-축), 앞/
-	뒤(로컬 z-축)로 이동한다. ‘Page Up’과 ‘Page Down’ 키를 누르면 플레이어를 위/아래(로컬 y-축)로 이동한다.*/
-	if (::GetKeyboardState(pKeyBuffer))
-	{
-		if (pKeyBuffer[VK_UP] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeyBuffer[VK_DOWN] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeyBuffer[VK_LEFT] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeyBuffer[VK_RIGHT] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeyBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeyBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
-	}
-	float cxDelta = 0.0f, cyDelta = 0.0f;
 	POINT ptCursorPos;
+	float cxDelta = 0.0f, cyDelta = 0.0f;
 	/*마우스를 캡쳐했으면 마우스가 얼마만큼 이동하였는 가를 계산한다.
 	마우스 왼쪽 또는 오른쪽 버튼이 눌러질 때의 메시지(WM_LBUTTONDOWN, WM_RBUTTONDOWN)를 처리할 때 마우스를 캡쳐하였다.
 	그러므로 마우스가 캡쳐된 것은 마우스 버튼이 눌려진 상태를 의미한다.
@@ -958,20 +793,11 @@ void CGameFramework::ProcessInput()
 		//마우스 커서의 위치를 마우스가 눌려졌던 위치로 설정한다.
 		::SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 	}
-	//마우스 또는 키 입력이 있으면 플레이어를 이동하거나(dwDirection) 회전한다(cxDelta 또는 cyDelta).
-	if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
-	{
-		if (cxDelta || cyDelta)
-		{
-			if (pKeyBuffer[VK_RBUTTON] & 0xF0)
-				m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-			else
-				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-		}
-		if (dwDirection)
-			m_pPlayer->Move(dwDirection, 500.0f * m_GameTimer.GetTimeElapsed(), true);
 
-	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+
+	if (::GetKeyboardState(pKeysBuffer))
+		rendering_scene->ProcessInput(pKeysBuffer, XMFLOAT3(cyDelta, cxDelta, 0.0f), m_GameTimer.GetTimeElapsed());
+
+
 }
 
