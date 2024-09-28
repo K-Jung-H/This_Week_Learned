@@ -243,38 +243,37 @@ CGameObject::CGameObject(int nMeshes)
 {
 	m_xmf4x4World = Matrix4x4::Identity();
 
-	m_nMeshes = nMeshes;
-	m_ppMeshes = NULL;
-	if (m_nMeshes > 0)
-	{
-		m_ppMeshes = new CMesh*[m_nMeshes];
-		for (int i = 0; i < m_nMeshes; i++)	m_ppMeshes[i] = NULL;
-	}
+	m_ppMeshes.resize(nMeshes);
+
+	for (int i = 0; i < m_ppMeshes.size(); ++i)
+		m_ppMeshes[i] = NULL;
 }
 
 CGameObject::~CGameObject()
 {
 	ReleaseShaderVariables();
 
-	if (m_ppMeshes)
+
+	for (int i = 0; i < m_ppMeshes.size(); i++)
 	{
-		for (int i = 0; i < m_nMeshes; i++)
-		{
-			if (m_ppMeshes[i]) m_ppMeshes[i]->Release();
-			m_ppMeshes[i] = NULL;
-		}
-		delete[] m_ppMeshes;
+		if (m_ppMeshes[i]) m_ppMeshes[i]->Release();
+		m_ppMeshes[i] = NULL;
 	}
+	m_ppMeshes.clear();
+	
 	if (m_pMaterial) m_pMaterial->Release();
 }
 
 void CGameObject::SetMesh(int nIndex, CMesh *pMesh)
 {
-	if (m_ppMeshes)
+	if (m_ppMeshes.size())
 	{
-		if (m_ppMeshes[nIndex]) m_ppMeshes[nIndex]->Release();
+		if (m_ppMeshes[nIndex]) 
+			m_ppMeshes[nIndex]->Release();
 		m_ppMeshes[nIndex] = pMesh;
-		if (pMesh) pMesh->AddRef();
+		
+		if (pMesh) 
+			pMesh->AddRef();
 	}
 }
 
@@ -342,26 +341,25 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 	UpdateShaderVariables(pd3dCommandList);
 	pd3dCommandList->SetGraphicsRootDescriptorTable(2, m_d3dCbvGPUDescriptorHandle);
 
-	if (m_ppMeshes)
+
+	for (int i = 0; i < m_ppMeshes.size(); i++)
 	{
-		for (int i = 0; i < m_nMeshes; i++)
-		{
-			if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList);
-		}
+		if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList);
 	}
+	
 }
 
 void CGameObject::ReleaseUploadBuffers()
 {
-	if (m_ppMeshes)
-	{
-		for (int i = 0; i < m_nMeshes; i++)
-		{
-			if (m_ppMeshes[i]) m_ppMeshes[i]->ReleaseUploadBuffers();
-		}
-	}
 
-	if (m_pMaterial) m_pMaterial->ReleaseUploadBuffers();
+	for (int i = 0; i < m_ppMeshes.size(); i++)
+	{
+		if (m_ppMeshes[i]) m_ppMeshes[i]->ReleaseUploadBuffers();
+	}
+	
+
+	if (m_pMaterial) 
+		m_pMaterial->ReleaseUploadBuffers();
 }
 
 void CGameObject::SetPosition(float x, float y, float z)
@@ -449,6 +447,34 @@ void CGameObject::SetLookAt(XMFLOAT3& xmf3Target, XMFLOAT3& xmf3Up)
 	*/
 }
 
+void CGameObject::GenerateRayForPicking(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4&
+	xmf4x4View, XMFLOAT3* pxmf3PickRayOrigin, XMFLOAT3* pxmf3PickRayDirection)
+{
+	XMFLOAT4X4 xmf4x4WorldView = Matrix4x4::Multiply(m_xmf4x4World, xmf4x4View);
+	XMFLOAT4X4 xmf4x4Inverse = Matrix4x4::Inverse(xmf4x4WorldView);
+	XMFLOAT3 xmf3CameraOrigin(0.0f, 0.0f, 0.0f);
+	//카메라 좌표계의 원점을 모델 좌표계로 변환한다. 
+	*pxmf3PickRayOrigin = Vector3::TransformCoord(xmf3CameraOrigin, xmf4x4Inverse);
+	//카메라 좌표계의 점(마우스 좌표를 역변환하여 구한 점)을 모델 좌표계로 변환한다. 
+	*pxmf3PickRayDirection = Vector3::TransformCoord(xmf3PickPosition, xmf4x4Inverse);
+	//광선의 방향 벡터를 구한다. 
+	*pxmf3PickRayDirection = Vector3::Normalize(Vector3::Subtract(*pxmf3PickRayDirection, *pxmf3PickRayOrigin));
+}
+
+int CGameObject::PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfHitDistance)
+{
+	int nIntersected = 0;
+	for(CMesh* mesh_ptr : m_ppMeshes)
+	{
+		XMFLOAT3 xmf3PickRayOrigin, xmf3PickRayDirection;
+		//모델 좌표계의 광선을 생성한다. 
+		GenerateRayForPicking(xmf3PickPosition, xmf4x4View, &xmf3PickRayOrigin, &xmf3PickRayDirection);
+		//모델 좌표계의 광선과 메쉬의 교차를 검사한다. 
+		nIntersected = mesh_ptr->CheckRayIntersection(xmf3PickRayOrigin, xmf3PickRayDirection, pfHitDistance);
+	}
+	return(nIntersected);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CRotatingObject::CRotatingObject(int nMeshes)
@@ -506,9 +532,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	long cxBlocks = (m_nWidth - 1) / cxQuadsPerBlock;
 	long czBlocks = (m_nLength - 1) / czQuadsPerBlock;
 
-	m_nMeshes = cxBlocks * czBlocks;
-	m_ppMeshes = new CMesh*[m_nMeshes];
-	for (int i = 0; i < m_nMeshes; i++)	m_ppMeshes[i] = NULL;
+	m_ppMeshes.resize(cxBlocks * czBlocks);
+
+	for (int i = 0; i < m_ppMeshes.size(); i++)
+		m_ppMeshes[i] = NULL;
 
 	CHeightMapGridMesh *pHeightMapGridMesh = NULL;
 	for (int z = 0, zStart = 0; z < czBlocks; z++)
@@ -524,11 +551,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CTexture *pTerrainTexture = new CTexture(3, RESOURCE_TEXTURE2D, 0, 3);
+	CTexture *pTerrainTexture = new CTexture(3, RESOURCE_TEXTURE2D, 0, 3); // 텍스쳐는 리소스 3개 사용 + 루트 파라메터에 서술자 3개 사용하겠다
+
 	pTerrainTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
 	pTerrainTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 1);
 	pTerrainTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/HeightMap(Alpha).dds", RESOURCE_TEXTURE2D, 2);
-	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainTexture, 0, 4);
+	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainTexture, 0, 4); // 루트 파라메터 서술자 인덱스 4번부터 차례대로 연결하겠다 // 위에서 3개 사용하겟다고 선언
 
 	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); //256의 배수
 
@@ -570,7 +598,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CTexture *pSkyBoxTexture = new CTexture(6, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture *pSkyBoxTexture = new CTexture(6, RESOURCE_TEXTURE2D, 0, 1); // 텍스쳐는 리소스 6개 사용 + 루트 파라메터에 서술자 1개 사용하겠다
 
 	// 이거 큐브 텍스쳐맵으로 바꾸기
 	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/SkyBox_Front_0.dds", RESOURCE_TEXTURE2D, 0);
@@ -579,7 +607,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/SkyBox_Right_0.dds", RESOURCE_TEXTURE2D, 3);
 	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/SkyBox_Top_0.dds", RESOURCE_TEXTURE2D, 4);
 	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/SkyBox_Bottom_0.dds", RESOURCE_TEXTURE2D, 5);
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, 3);
+	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, 3); // 루트 파라메터 3번 인덱스에 연결하겠다
 
 	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); //256의 배수
 
@@ -621,17 +649,16 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(2, m_d3dCbvGPUDescriptorHandle);
 
-	if (m_ppMeshes)
+
+	for (int i = 0; i < m_ppMeshes.size(); ++i)
 	{
-		for (int i = 0; i < m_nMeshes; i++)
+		if (m_pMaterial)
 		{
-			if (m_pMaterial)
-			{
-				if (m_pMaterial->m_pTexture) m_pMaterial->m_pTexture->UpdateShaderVariable(pd3dCommandList, 0, i);				
-			}
-			if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList);
+			if (m_pMaterial->m_pTexture) m_pMaterial->m_pTexture->UpdateShaderVariable(pd3dCommandList, 0, i);
 		}
+		if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList);
 	}
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

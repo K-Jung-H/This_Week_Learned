@@ -46,6 +46,9 @@ public:
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
+	virtual CGameObject* PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfNearHitDistance) { return NULL; }
+
+
 public:
 	ID3D12PipelineState				**m_ppd3dPipelineStates = NULL;
 	int								m_nPipelineStates = 0;
@@ -80,19 +83,19 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob);
 
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	virtual void ReleaseUploadBuffers();
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
+	std::string PickMeshByRayIntersection(XMFLOAT3& xmf3PickPosition);
+
 public:
-	int								m_nMeshes = 0;
-	CMesh** m_ppMeshes = NULL;
+	std::vector<std::pair<CMesh*, std::string>> screen_mesh_list; // 스크린 좌표 메시 + 이름
 
 	CTexture* m_pTexture = NULL;
 
-	void SetMesh(UINT nIndex, CMesh* pMesh);
+	void SetMesh(UINT nIndex, std::pair<CMesh*, std::string> mesh_data);
 	void SetTexture(CTexture* pTexture);
 };
 
@@ -134,6 +137,8 @@ public:
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
+	CGameObject* PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfNearHitDistance) override;
+
 	
 	void AddObjects(CGameObject* game_obj_ptr) { m_ppObjects.push_back(game_obj_ptr); }
 	int GetNumberOfObjects() { return(m_ppObjects.size()); }
@@ -143,7 +148,10 @@ protected:
 
 	ID3D12Resource					*m_pd3dcbGameObjects = NULL;
 	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObjects = NULL;
+
 };
+
+
 
 class CBillboardObjectsShader : public CObjectsShader
 {

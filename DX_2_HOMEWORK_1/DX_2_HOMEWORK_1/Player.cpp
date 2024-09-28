@@ -28,7 +28,19 @@ CPlayer::CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	m_fYaw = 0.0f;
 
 	if (m_pCamera == NULL)
-		m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
+	{
+		SetFriction(250.0f);
+		SetGravity(XMFLOAT3(0.0f, -400.0f, 0.0f));
+		SetMaxVelocityXZ(300.0f);
+		SetMaxVelocityY(400.0f);
+		m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, 0x00);
+		m_pCamera->SetTimeLag(0.0f);
+		m_pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, 0.0f));
+		m_pCamera->GenerateProjectionMatrix(1.01f, 50000.0f, ASPECT_RATIO, 60.0f);
+		m_pCamera->SetPosition(Vector3::Add(m_xmf3Position, m_pCamera->GetOffset()));
+		Update(0.0f);
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
 }
 
 CPlayer::~CPlayer()

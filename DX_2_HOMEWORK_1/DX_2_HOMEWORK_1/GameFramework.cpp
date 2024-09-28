@@ -34,7 +34,7 @@ CGameFramework::CGameFramework()
 	rendering_scene = NULL;
 	game_scene = NULL;
 	start_scene = NULL;
-	m_pPlayer = NULL;
+	rendering_player = NULL;
 
 	_tcscpy_s(m_pszCaption, _T("LabProject ("));
 }
@@ -340,9 +340,15 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case WM_KEYUP:
 			switch (wParam)
 			{
-				case VK_TAB:
+			case VK_TAB:
+				if (game_scene == NULL)
+				{
+					Build_Start_Scene();
 					rendering_scene = game_scene;
-					break;
+					rendering_player = player_list[1];
+					m_pCamera = rendering_player->GetCamera();
+				}
+				break;
 
 				case VK_ESCAPE:
 					::PostQuitMessage(0);
@@ -352,7 +358,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F1:
 				case VK_F2:
 				case VK_F3:
-					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
+					m_pCamera = rendering_player->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
 					break;
 				case VK_F9:
 					ChangeSwapChainState();
@@ -434,18 +440,30 @@ void CGameFramework::BuildObjects()
 {
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
-	start_scene = new Start_Scene();
-	start_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	Start_Scene* S_scene = new Start_Scene();
+	S_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	scene_list.push_back(S_scene);
 
-	//game_scene = new Game_Scene();
-	//game_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
-	// m_pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature(), rendering_scene->GetTerrain(), 1);
-	// 디스크럽터 힙이 전역으로 설정되어, 씬에서 모두 공유하고 있음, 씬의 모든 버퍼 형태를 통일해야 하나?
-	m_pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, start_scene->GetGraphicsRootSignature(), 0, 1);
+	//Game_Scene* G_scene = new Game_Scene();
+	//G_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	//scene_list.push_back(G_scene);
 
-	m_pCamera = m_pPlayer->GetCamera();
-	rendering_scene = start_scene;
 
+	start_scene = S_scene;
+	//game_scene = G_scene;
+	
+	CPlayer* start_player = new CPlayer(m_pd3dDevice, m_pd3dCommandList, start_scene->GetGraphicsRootSignature(), NULL, 0);
+	start_scene->SetPlayer(start_player);
+	player_list.push_back(start_player);
+
+	//CPlayer* game_player = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature(), game_scene->GetTerrain(), 1);
+	//game_scene->SetPlayer(game_player);
+	//player_list.push_back(game_player);
+
+	rendering_player = player_list[0];
+	rendering_scene = scene_list[0];
+
+	m_pCamera = rendering_player->GetCamera();
 
 	CreateShaderVariables();
 
@@ -465,13 +483,16 @@ void CGameFramework::ReleaseObjects()
 {
 	ReleaseShaderVariables();
 
-	if (m_pPlayer) delete m_pPlayer;
+	for (CPlayer* player_ptr : player_list)
+		if (player_ptr)
+			delete player_ptr;
 
-	if (start_scene) start_scene->ReleaseObjects();
-	if (start_scene) delete start_scene;
+	for (CScene* scene_ptr : scene_list)
+	{
+		if (scene_ptr) scene_ptr->ReleaseObjects();
+		if (scene_ptr) delete scene_ptr;
 
-	if (game_scene) game_scene->ReleaseObjects();
-	if (game_scene) delete game_scene;
+	}
 }
 
 void CGameFramework::CreateShaderVariables()
@@ -502,7 +523,7 @@ void CGameFramework::ReleaseShaderVariables()
 
 void CGameFramework::ProcessInput()
 {
-	if (m_pPlayer == NULL)
+	if (rendering_player == NULL)
 		return;
 
 	static UCHAR pKeysBuffer[256];
@@ -536,14 +557,14 @@ void CGameFramework::ProcessInput()
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					rendering_player->Rotate(cyDelta, 0.0f, -cxDelta);
 				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					rendering_player->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);
+			if (dwDirection) rendering_player->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	rendering_player->Update(m_GameTimer.GetTimeElapsed());
 }
 
 void CGameFramework::AnimateObjects()
@@ -583,6 +604,8 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
+
+
 	m_GameTimer.Tick(0.0f);
 	
 	ProcessInput();
@@ -623,7 +646,7 @@ void CGameFramework::FrameAdvance()
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
-	m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
+	rendering_player->Render(m_pd3dCommandList, m_pCamera);
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
@@ -658,9 +681,37 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.GetFrameRate(m_pszCaption + 12, 37);
 
 	size_t nLength = _tcslen(m_pszCaption);
-	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
+	XMFLOAT3 xmf3Position = rendering_player->GetPosition();
 	_stprintf_s(m_pszCaption + nLength, 70 - nLength, _T("(%5.1f, %5.1f, %5.1f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 
 	::SetWindowText(m_hWnd, m_pszCaption);
+
+
 }
 
+
+void CGameFramework::Build_Start_Scene()
+{
+	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
+	Game_Scene* G_scene = new Game_Scene();
+
+	G_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	scene_list.push_back(G_scene);
+
+	CPlayer* game_player = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, G_scene->GetGraphicsRootSignature(), G_scene->GetTerrain(), 1);
+	player_list.push_back(game_player);
+
+
+	game_scene = G_scene;
+	game_scene->SetPlayer(game_player);
+
+
+	m_pd3dCommandList->Close();
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	WaitForGpuComplete();
+	game_scene->ReleaseUploadBuffers();
+
+}

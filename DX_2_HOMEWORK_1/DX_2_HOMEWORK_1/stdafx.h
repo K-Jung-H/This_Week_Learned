@@ -38,7 +38,9 @@
 #include <memory.h>
 #include <wrl.h>
 
+#include <algorithm>
 #include <vector>
+#include <any>
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;
@@ -76,6 +78,9 @@ inline bool IsZero(float fValue) { return((fabsf(fValue) < EPSILON)); }
 inline bool IsEqual(float fA, float fB) { return(::IsZero(fA - fB)); }
 inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
 inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
+
+// 디버그 메시지 출력함수
+extern void DebugOutput(const std::string& message);
 
 namespace Vector3
 {

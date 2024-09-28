@@ -95,6 +95,8 @@ protected:
 
 	D3D12_PRIMITIVE_TOPOLOGY		m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	UINT							m_nSlot = 0;
+
+
 	UINT							m_nVertices = 0;
 	UINT							m_nStride = 0;
 	UINT							m_nOffset = 0;
@@ -103,8 +105,17 @@ protected:
 	UINT							m_nStartIndex = 0;
 	int								m_nBaseVertex = 0;
 
+
+	// 정점 피킹을 위해 저장해둔 데이터 // 여기부터 이어서 작성하기, 메쉬 생성할 때, 정점 데이터를  따로 저장해두어야 함
+	CTexturedVertex* m_pVertices = NULL;
+	UINT* m_pnIndices = NULL;
+	BoundingOrientedBox* Mesh_BoundingBox = NULL;
+
 public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList);
+
+	int CheckRayIntersection(XMFLOAT3& xmf3RayOrigin, XMFLOAT3& xmf3RayDirection, float* pfNearHitDistance);
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -209,13 +220,19 @@ class CScreenRectMeshTextured : public CMesh
 public:
 	CScreenRectMeshTextured(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fxLeft = 0.0f, float fWidth = 2.0f, float fyTop = 0.0f, float fHeight = 2.0f);
 	virtual ~CScreenRectMeshTextured();
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CTexturedRectMesh : public CMesh
 {
+	BoundingOrientedBox* Mesh_BoundingBox = NULL;
+
+
 public:
 	CTexturedRectMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth=20.0f, float fHeight=20.0f, float fDepth=20.0f, float fxPosition=0.0f, float fyPosition=0.0f, float fzPosition=0.0f);
 	virtual ~CTexturedRectMesh();
+
+
 };

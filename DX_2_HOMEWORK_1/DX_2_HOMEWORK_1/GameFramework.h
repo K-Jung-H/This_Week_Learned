@@ -48,6 +48,8 @@ public:
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
+	void Build_Start_Scene();
+
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -84,22 +86,25 @@ private:
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif
+	std::vector<CScene*>			scene_list;
+	std::vector<CPlayer*>			player_list;
 
 	CGameTimer					m_GameTimer;
 
-//	CScene						*m_pScene = NULL;
 	Start_Scene					*start_scene = NULL;
 	Game_Scene				*game_scene = NULL;
+	
 	CScene						*rendering_scene = NULL;
+	CPlayer						*rendering_player = NULL;
 
-
-	CPlayer						*m_pPlayer = NULL;
+	
 	CCamera						*m_pCamera = NULL;
 
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszCaption[70];
 
+	bool							game_start = false;
 protected:
 	ID3D12Resource* m_pd3dcbFrameworkInfo = NULL;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;

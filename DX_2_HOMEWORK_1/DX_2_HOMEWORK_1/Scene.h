@@ -5,12 +5,18 @@
 #pragma once
 
 #include "Shader.h"
+#include "Player.h"
 
 class CDescriptorHeap
 {
+private:
+	int								m_nReferences = 0;
 public:
 	CDescriptorHeap();
 	~CDescriptorHeap();
+
+	void AddRef() { m_nReferences++; } // 새로운 씬이 생성될때마다 호출 == 씬의 BuildObject 에 위치 시키기
+	void Release() { if (--m_nReferences <= 0) delete this; } // 씬 제거 될때 호출 == 씬의 ReleaseObject에 위치 시키기
 
 	ID3D12DescriptorHeap* m_pd3dCbvSrvDescriptorHeap = NULL;
 
@@ -44,6 +50,8 @@ public:
 
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
+	virtual void ReleaseUploadBuffers();
+
 
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
@@ -55,13 +63,21 @@ public:
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
-	virtual void ReleaseUploadBuffers();
+	CGameObject* PickObjectPointedByCursor(int xClient, int yClient, CCamera* pCamera);
+
+
 
 	CHeightMapTerrain *GetTerrain() { return(m_pTerrain); }
 
+	void SetPlayer(CPlayer* pPlayer) { m_pPlayer = pPlayer; }
+
 protected:
-	CShader						**m_ppShaders = NULL;
-	int							m_nShaders = 0;
+
+	std::vector<CShader*>			shader_list;
+	CTextureToScreenShader*		screen_mesh_shader = NULL;
+
+	CPlayer*								m_pPlayer = NULL;
+
 
 	CHeightMapTerrain			*m_pTerrain = NULL;
 	CSkyBox						*m_pSkyBox = NULL;
@@ -87,10 +103,13 @@ public:
 	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorNextHandle() { return(m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle); }
 	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUSrvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle); }
 	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle); }
+
 };
 
 class Start_Scene : public CScene
 {
+private:
+	std::string selected_screen_info;
 public:
 	Start_Scene();
 	~Start_Scene();

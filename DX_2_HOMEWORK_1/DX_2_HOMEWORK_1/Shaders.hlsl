@@ -141,8 +141,8 @@ VS_TEXTURED_OUTPUT VSTextured(VS_TEXTURED_INPUT input)
 float4 PSTextured(VS_TEXTURED_OUTPUT input, uint primitiveID : SV_PrimitiveID) : SV_TARGET
 {
     float4 cColor = gtxtTexture.Sample(gWrapSamplerState, input.uv);
-
-	return(cColor);
+	
+	return (cColor);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -161,6 +161,10 @@ VS_TEXTURED_OUTPUT VSTextureToScreen(VS_TEXTURED_INPUT input)
 float4 PSTextureToScreen(VS_TEXTURED_OUTPUT input) : SV_TARGET
 {
     float4 cColor = gtxtTexture.Sample(gWrapSamplerState, input.uv);
+	
+    if (cColor.w == 0.0f)
+        discard;
+	
     return (cColor);
 }
 

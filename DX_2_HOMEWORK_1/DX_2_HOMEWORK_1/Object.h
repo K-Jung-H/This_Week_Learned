@@ -144,8 +144,7 @@ public:
 public:
 	XMFLOAT4X4						m_xmf4x4World;
 
-	CMesh							**m_ppMeshes;
-	int								m_nMeshes;
+	std::vector<CMesh*>				m_ppMeshes;
 
 	CMaterial						*m_pMaterial = NULL;
 
@@ -191,6 +190,9 @@ public:
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 
 	void SetLookAt(XMFLOAT3& xmf3Target, XMFLOAT3& xmf3Up=XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+	void GenerateRayForPicking(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, XMFLOAT3* pxmf3PickRayOrigin, XMFLOAT3* pxmf3PickRayDirection);
+	int PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfHitDistance);
 };
 
 class CRotatingObject : public CGameObject

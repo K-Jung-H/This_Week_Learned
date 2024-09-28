@@ -134,6 +134,9 @@ void CScene::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTextu
 
 CScene::CScene()
 {
+	if(m_pDescriptorHeap == NULL)
+		m_pDescriptorHeap = new CDescriptorHeap();
+	m_pDescriptorHeap->AddRef();
 }
 
 CScene::~CScene()
@@ -184,10 +187,41 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 {
 }
 
+CGameObject* CScene::PickObjectPointedByCursor(int xClient, int yClient, CCamera* pCamera)
+{
+	if (!pCamera) 
+		return(NULL);
+	XMFLOAT4X4 xmf4x4View = pCamera->GetViewMatrix();
+	XMFLOAT4X4 xmf4x4Projection = pCamera->GetProjectionMatrix();
+	D3D12_VIEWPORT d3dViewport = pCamera->GetViewport();
+	XMFLOAT3 xmf3PickPosition;
+
+	xmf3PickPosition.x = (((2.0f * xClient) / d3dViewport.Width) - 1) / xmf4x4Projection._11;
+	xmf3PickPosition.y = -(((2.0f * yClient) / d3dViewport.Height) - 1) / xmf4x4Projection._22;
+	xmf3PickPosition.z = 1.0f;
+
+	int nIntersected = 0;
+	float fHitDistance = FLT_MAX, fNearestHitDistance = FLT_MAX;
+	
+	CGameObject* pIntersectedObject = NULL, * pNearestObject = NULL;
+	
+	for (int i = 0; i < shader_list.size(); i++)
+	{
+		pIntersectedObject = shader_list[i]->PickObjectByRayIntersection(xmf3PickPosition, xmf4x4View, &fHitDistance);
+		if (pIntersectedObject && (fHitDistance < fNearestHitDistance))
+		{
+			fNearestHitDistance = fHitDistance;
+			pNearestObject = pIntersectedObject;
+		}
+	}
+	return(pNearestObject);
+}
+
+
+
 //===============================================================
 
-
-Start_Scene::Start_Scene()
+Start_Scene::Start_Scene() : CScene()
 {
 }
 
@@ -204,46 +238,42 @@ void Start_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	CTexture* pTexture = new CTexture(3, RESOURCE_TEXTURE2D, 0, 1);
 	pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/background_image.dds", RESOURCE_TEXTURE2D, 0);
-	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Wood.jpg", RESOURCE_TEXTURE2D, 1);
-	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 2);
+	pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/play_button.dds", RESOURCE_TEXTURE2D, 1);
+	pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/option_button.dds", RESOURCE_TEXTURE2D, 2);
 
-
-	m_pDescriptorHeap = new CDescriptorHeap();
-
+	// 17032 + 1, 16 + 3
 	CreateCbvSrvDescriptorHeaps(pd3dDevice, 1, 3);
 	CreateShaderResourceViews(pd3dDevice, pTexture, 0, 2);
 
 
-
 	CScreenRectMeshTextured* pMesh = new CScreenRectMeshTextured(pd3dDevice, pd3dCommandList, -1.0f, 2.0f, 1.0f, 2.0f);
-	pTextureToScreenShader->SetMesh(0, pMesh);
+	pTextureToScreenShader->SetMesh(0, std::make_pair(pMesh, std::string("background")));
+
 	pMesh = new CScreenRectMeshTextured(pd3dDevice, pd3dCommandList, 0.3f, 0.6f, -0.6f, 0.3f);
-	pTextureToScreenShader->SetMesh(1, pMesh);
+	pTextureToScreenShader->SetMesh(1, std::make_pair(pMesh, std::string("Start")));
+
 	pMesh = new CScreenRectMeshTextured(pd3dDevice, pd3dCommandList, 0.5f, 0.4f, 0.9f, 0.3f);
-	pTextureToScreenShader->SetMesh(2, pMesh);
+	pTextureToScreenShader->SetMesh(2, std::make_pair(pMesh, std::string("Option")));
 
 	pTextureToScreenShader->SetTexture(pTexture);
-
-	m_nShaders = 1;
-	m_ppShaders = new CShader * [m_nShaders];
 	
-	m_ppShaders[0] = pTextureToScreenShader;
+	screen_mesh_shader = pTextureToScreenShader;
 }
 
 void Start_Scene::ReleaseObjects()
 {
 	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
-	if (m_pDescriptorHeap) delete m_pDescriptorHeap;
+	if (m_pDescriptorHeap) m_pDescriptorHeap->Release();
 
-	if (m_ppShaders)
+	if (shader_list.size())
 	{
-		for (int i = 0; i < m_nShaders; i++)
+		for (CShader* shader_ptr : shader_list)
 		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
+			shader_ptr->ReleaseShaderVariables();
+			shader_ptr->ReleaseObjects();
+			shader_ptr->Release();
 		}
-		delete[] m_ppShaders;
+		shader_list.clear();
 	}
 
 	if (m_pTerrain) delete m_pTerrain;
@@ -252,7 +282,8 @@ void Start_Scene::ReleaseObjects()
 
 void Start_Scene::ReleaseUploadBuffers()
 {
-	for (int i = 0; i < m_nShaders; i++) m_ppShaders[i]->ReleaseUploadBuffers();
+	for (CShader* shader_ptr : shader_list)
+		shader_ptr->ReleaseUploadBuffers();
 
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
@@ -328,11 +359,42 @@ ID3D12RootSignature* Start_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3d
 
 bool Start_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	{
+		int mouseX = LOWORD(lParam);
+		int mouseY = HIWORD(lParam);
+
+		int width = FRAME_BUFFER_WIDTH;
+		int height = FRAME_BUFFER_HEIGHT;
+
+		float screen_x = (static_cast<float>(mouseX) / (width / 2)) - 1.0f;
+		float screen_y = 1.0f - (static_cast<float>(mouseY) / (height / 2)); 
+
+		selected_screen_info = screen_mesh_shader->PickMeshByRayIntersection(XMFLOAT3(screen_x, screen_y, -1.0f));
+		if (selected_screen_info != "")
+			DebugOutput(selected_screen_info);
+		
+	}
+		break;
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+		::ReleaseCapture();
+		break;
+	case WM_MOUSEMOVE:
+		break;
+	default:
+		break;
+	}
+
 	return(false);
 }
 
 bool Start_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+
 	return(false);
 }
 
@@ -343,10 +405,12 @@ bool Start_Scene::ProcessInput(UCHAR* pKeysBuffer)
 
 void Start_Scene::AnimateObjects(float fDeltaTime)
 {
-	for (int i = 0; i < m_nShaders; i++)
+	for (CShader* shader_ptr : shader_list)
 	{
-		m_ppShaders[i]->AnimateObjects(fDeltaTime);
+		shader_ptr->AnimateObjects(fDeltaTime);
 	}
+
+	screen_mesh_shader->AnimateObjects(fDeltaTime);
 }
 
 void Start_Scene::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -360,16 +424,17 @@ void Start_Scene::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CC
 
 void Start_Scene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	for (int i = 0; i < m_nShaders; i++)
-	{
-		m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	}
+	for(CShader* shader_ptr : shader_list)
+		shader_ptr->Render(pd3dCommandList, pCamera);
+
+	screen_mesh_shader->Render(pd3dCommandList, pCamera);
+	
 }
 
 //===============================================================
 
 
-Game_Scene::Game_Scene()
+Game_Scene::Game_Scene() : CScene()
 {
 }
 
@@ -385,9 +450,8 @@ void Game_Scene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLis
 
 	CBillboardObjectsShader *pObjectShader = new CBillboardObjectsShader();
 	int nObjects = pObjectShader->GetNumberOfObjects();
-
-	m_pDescriptorHeap = new CDescriptorHeap();
-	CreateCbvSrvDescriptorHeaps(pd3dDevice, nObjects + 1 + 1 + 1, 1 + 6 + 6 + 3); //Player(1), Skybox(6)
+	
+	CreateCbvSrvDescriptorHeaps(pd3dDevice, nObjects + 1 + 1 + 1, 1 + 6 + 6 + 3); // object +player + skybox + terrain ::: terrain 3 +  skybox  6 + Player(1), Skybox(6) + objectmap
 
 	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.5f, 0.0f, 0.0f);
@@ -399,28 +463,26 @@ void Game_Scene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLis
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
-	m_nShaders = 1;
-	m_ppShaders = new CShader*[m_nShaders];
 
 	pObjectShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature);
 	pObjectShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pTerrain);
-	m_ppShaders[0] = pObjectShader;
+	shader_list.push_back(pObjectShader);
 }
 
 void Game_Scene::ReleaseObjects()
 {
 	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
-	if (m_pDescriptorHeap) delete m_pDescriptorHeap;
+	if (m_pDescriptorHeap) m_pDescriptorHeap->Release();
 
-	if (m_ppShaders)
+	if (shader_list.size())
 	{
-		for (int i = 0; i < m_nShaders; i++)
+		for (CShader* shader_ptr : shader_list)
 		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
+			shader_ptr->ReleaseShaderVariables();
+			shader_ptr->ReleaseObjects();
+			shader_ptr->Release();
 		}
-		delete[] m_ppShaders;
+		shader_list.clear();
 	}
 
 	if (m_pTerrain) delete m_pTerrain;
@@ -429,7 +491,8 @@ void Game_Scene::ReleaseObjects()
 
 void Game_Scene::ReleaseUploadBuffers()
 {
-	for (int i = 0; i < m_nShaders; i++) m_ppShaders[i]->ReleaseUploadBuffers();
+	for (CShader* shader_ptr : shader_list)
+		shader_ptr->ReleaseUploadBuffers();
 
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
@@ -485,27 +548,27 @@ ID3D12RootSignature * Game_Scene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 
 	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0];
+	pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; // 게임 객체
 	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 	pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1];
+	pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; // 텍스쳐
 	pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2];
+	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2]; // 터레인 텍스쳐
 	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[5].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[3];
+	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[3]; // 터레인 디테일
 	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[6].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[4];
+	pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[4]; // 터레인 알파
 	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -562,6 +625,23 @@ ID3D12RootSignature * Game_Scene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 
 bool Game_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+		PickObjectPointedByCursor(LOWORD(lParam), HIWORD(lParam), m_pPlayer->GetCamera());
+		break;
+
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+		::ReleaseCapture();
+		break;
+	case WM_MOUSEMOVE:
+		break;
+	default:
+		break;
+	}
+
 	return(false);
 }
 
@@ -577,9 +657,9 @@ bool Game_Scene::ProcessInput(UCHAR *pKeysBuffer)
 
 void Game_Scene::AnimateObjects(float fDeltaTime)
 {
-	for (int i = 0; i < m_nShaders; i++)
+	for (CShader* shader_ptr : shader_list)
 	{
-		m_ppShaders[i]->AnimateObjects(fDeltaTime);
+		shader_ptr->AnimateObjects(fDeltaTime);
 	}
 }
 
@@ -597,9 +677,10 @@ void Game_Scene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCa
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	for (int i = 0; i < m_nShaders; i++)
-	{
-		m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	}
+	for (CShader* shader_ptr : shader_list)
+		shader_ptr->Render(pd3dCommandList, pCamera);
+
+//	screen_mesh_shader->Render(pd3dCommandList, pCamera);
+
 }
 

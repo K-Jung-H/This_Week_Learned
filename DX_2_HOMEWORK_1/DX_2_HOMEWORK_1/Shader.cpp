@@ -246,20 +246,26 @@ void CPlayerShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *
 //
 CTextureToScreenShader::CTextureToScreenShader(int nMeshes)
 {
-	m_nMeshes = nMeshes;
-	m_ppMeshes = new CMesh * [m_nMeshes];
-	for (int i = 0; i < m_nMeshes; i++) m_ppMeshes[i] = NULL;
+	screen_mesh_list.resize(nMeshes);
+	for (int i = 0; i < nMeshes; i++)
+	{
+		screen_mesh_list[i].first = NULL;
+		screen_mesh_list[i].second = "";
+	}
 }
 
 CTextureToScreenShader::~CTextureToScreenShader()
 {
-	for (int i = 0; i < m_nMeshes; i++)
+	for (std::pair<CMesh*, std::string>mesh_data : screen_mesh_list)
 	{
-		if (m_ppMeshes[i]) m_ppMeshes[i]->Release();
+		if (mesh_data.first)
+			mesh_data.first->Release();
 	}
-	if (m_ppMeshes) delete[] m_ppMeshes;
+	if (screen_mesh_list.size())
+		screen_mesh_list.clear();
 
-	if (m_pTexture) m_pTexture->Release();
+	if (m_pTexture) 
+		m_pTexture->Release();
 }
 
 void CTextureToScreenShader::SetTexture(CTexture* pTexture)
@@ -269,11 +275,16 @@ void CTextureToScreenShader::SetTexture(CTexture* pTexture)
 	if (m_pTexture) m_pTexture->AddRef();
 }
 
-void CTextureToScreenShader::SetMesh(UINT nIndex, CMesh* pMesh)
+void CTextureToScreenShader::SetMesh(UINT nIndex, std::pair<CMesh*, std::string> mesh_data)
 {
-	if (m_ppMeshes[nIndex]) m_ppMeshes[nIndex]->Release();
-	m_ppMeshes[nIndex] = pMesh;
-	if (m_ppMeshes[nIndex]) m_ppMeshes[nIndex]->AddRef();
+	if (screen_mesh_list[nIndex].first)
+		screen_mesh_list[nIndex].first->Release();
+
+	screen_mesh_list[nIndex].first = mesh_data.first;
+	screen_mesh_list[nIndex].second = mesh_data.second;
+
+	if (screen_mesh_list[nIndex].first
+		) screen_mesh_list[nIndex].first->AddRef();
 }
 
 D3D12_INPUT_LAYOUT_DESC CTextureToScreenShader::CreateInputLayout()
@@ -333,30 +344,56 @@ void CTextureToScreenShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSi
 
 void CTextureToScreenShader::ReleaseUploadBuffers()
 {
-	for (int i = 0; i < m_nMeshes; i++)
+	for (int i = 0; screen_mesh_list.size(); ++i)
 	{
-		if (m_ppMeshes[i]) m_ppMeshes[i]->ReleaseUploadBuffers();
+		if (screen_mesh_list[i].first)
+			screen_mesh_list[i].first->ReleaseUploadBuffers();
 	}
 
-	if (m_pTexture) m_pTexture->ReleaseUploadBuffers();
+	if (m_pTexture) 
+		m_pTexture->ReleaseUploadBuffers();
 }
 
-
-void CTextureToScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
-{
-}
 
 void CTextureToScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CShader::Render(pd3dCommandList, pCamera);
 
-	for (int i = 0; i < m_nMeshes; i++)
+	for(int i = 0; i < screen_mesh_list.size(); ++i)
 	{
-		if (m_pTexture) m_pTexture->UpdateShaderVariable(pd3dCommandList, 0, i);
-		if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList);
+		if (m_pTexture)
+			m_pTexture->UpdateShaderVariable(pd3dCommandList, 0, i);
+
+		if (screen_mesh_list[i].first) 
+			screen_mesh_list[i].first->Render(pd3dCommandList);
 	}
 }
 
+
+std::string CTextureToScreenShader::PickMeshByRayIntersection(XMFLOAT3& xmf3PickPosition)
+{
+	int nIntersected = 0;
+	float fHitDistance = FLT_MAX;
+	float Nearest_Distance = FLT_MAX;
+
+	std::string obj_name = "";
+	XMFLOAT3 xmf3PickRayOrigin, xmf3PickRayDirection;
+	
+	for (int i = 0; i< screen_mesh_list.size(); ++i)
+	{
+		xmf3PickRayOrigin = xmf3PickPosition;
+		xmf3PickRayDirection = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		nIntersected = screen_mesh_list[i].first->CheckRayIntersection(xmf3PickRayOrigin, xmf3PickRayDirection, &fHitDistance);
+	
+		if ((nIntersected > 0) && (fHitDistance <= Nearest_Distance))
+		{
+			Nearest_Distance = fHitDistance;
+			obj_name = screen_mesh_list[i].second;
+		}
+	}
+
+	return(obj_name);
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -488,6 +525,24 @@ void CObjectsShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 	}
 }
 
+CGameObject* CObjectsShader::PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfNearHitDistance)
+{
+	int nIntersected = 0;
+	*pfNearHitDistance = FLT_MAX;
+	float fHitDistance = FLT_MAX;
+	CGameObject* pSelectedObject = NULL;
+	for (CGameObject* object_ptr : m_ppObjects)
+	{
+		nIntersected = object_ptr->PickObjectByRayIntersection(xmf3PickPosition, xmf4x4View, &fHitDistance);
+		if ((nIntersected > 0) && (fHitDistance < *pfNearHitDistance))
+		{
+			*pfNearHitDistance = fHitDistance;
+			pSelectedObject = object_ptr;
+		}
+	}
+	return(pSelectedObject);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CBillboardObjectsShader::CBillboardObjectsShader()
@@ -553,7 +608,7 @@ D3D12_SHADER_BYTECODE CBillboardObjectsShader::CreatePixelShader(ID3DBlob** ppd3
 void CBillboardObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext)
 {
 	CTexture *ppGrassTextures[2];
-	ppGrassTextures[0] = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	ppGrassTextures[0] = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1); // 리소스 1개 사용 + 루트 파라메터에 서술자 1개 사용하겠다
 	ppGrassTextures[0]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Grass01.dds", RESOURCE_TEXTURE2D, 0);
 	ppGrassTextures[1] = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	ppGrassTextures[1]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Grass02.dds", RESOURCE_TEXTURE2D, 0);
