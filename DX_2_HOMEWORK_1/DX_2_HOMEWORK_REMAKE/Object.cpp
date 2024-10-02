@@ -832,7 +832,10 @@ int CGameObject::PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT
 		//모델 좌표계의 광선과 메쉬의 교차를 검사한다. 
 		nIntersected = m_pMesh->CheckRayIntersection(xmf3PickRayOrigin, xmf3PickRayDirection, pfHitDistance);
 	}
+
+
 	return(nIntersected);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -911,19 +914,57 @@ void Screen_Rect::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
-int Screen_Rect::PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfHitDistance)
+Screen_Rect* Screen_Rect::PickScreenObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, float* pfHitDistance)
 {
-	int nIntersected = 0;
-	if(m_pMesh)
-	{
-		XMFLOAT3 xmf3PickRayOrigin = { xmf3PickPosition };
-		XMFLOAT3 xmf3PickRayDirection = { 0.0f,0.0f,1.0f };
+	float Distance = FLT_MAX; 
+	Screen_Rect* nearest_rect = NULL;
 
-		//모델 좌표계의 광선과 메쉬의 교차를 검사한다. 
-		nIntersected = m_pMesh->CheckRayIntersection(xmf3PickRayOrigin, xmf3PickRayDirection, pfHitDistance);
+	XMFLOAT3 xmf3PickRayOrigin = { xmf3PickPosition };
+	XMFLOAT3 xmf3PickRayDirection = { 0.0f, 0.0f, 1.0f };
+
+	// 모델 좌표계의 광선과 메쉬의 교차를 검사
+	if (m_pMesh)
+	{
+		float hitDistance = FLT_MAX; 
+		int nIntersected = m_pMesh->CheckRayIntersection(xmf3PickRayOrigin, xmf3PickRayDirection, &hitDistance);
+
+		if (nIntersected && hitDistance < Distance)
+		{
+			nearest_rect = this; 
+			Distance = hitDistance; 
+		}
 	}
-	return(nIntersected);
+
+	// 형제 노드에 대한 재귀 호출
+	if (m_pSibling)
+	{
+		Screen_Rect* sibling_intersected = ((Screen_Rect*)m_pSibling)->PickScreenObjectByRayIntersection(xmf3PickPosition, pfHitDistance);
+
+		if (sibling_intersected && *pfHitDistance < Distance)
+		{
+			nearest_rect = sibling_intersected; 
+			Distance = *pfHitDistance; 
+		}
+	}
+
+	// 자식 노드에 대한 재귀 호출
+	if (m_pChild)
+	{
+		Screen_Rect* child_intersected = ((Screen_Rect*)m_pChild)->PickScreenObjectByRayIntersection(xmf3PickPosition, pfHitDistance);
+
+		if (child_intersected && *pfHitDistance < Distance)
+		{
+			nearest_rect = child_intersected; 
+			Distance = *pfHitDistance; 
+		}
+	}
+
+	if (nearest_rect)
+		*pfHitDistance = Distance; 
+
+	return nearest_rect; 
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CSuperCobraObject::CSuperCobraObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)

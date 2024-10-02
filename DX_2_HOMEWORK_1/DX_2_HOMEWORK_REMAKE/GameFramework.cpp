@@ -361,13 +361,13 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
         case WM_MOUSEMOVE:
-			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 			rendering_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
             break;
         case WM_KEYDOWN:
         case WM_KEYUP:
-			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			rendering_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			break;
 	}
 	return(0);
@@ -429,6 +429,8 @@ void CGameFramework::BuildObjects()
 	game_player->SetPosition(XMFLOAT3(0.0f, -10.0f, 0.0f));
 	game_scene->m_pPlayer = game_player;
 
+	CreateShaderVariables();
+
 
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
@@ -449,6 +451,34 @@ void CGameFramework::ReleaseObjects()
 	if (rendering_scene) rendering_scene->ReleaseObjects();
 	if (rendering_scene) delete rendering_scene;
 }
+
+
+void CGameFramework::CreateShaderVariables()
+{
+	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
+	m_pd3dcbFrameworkInfo = ::CreateBufferResource(m_pd3dDevice, m_pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbFrameworkInfo->Map(0, NULL, (void**)&m_pcbMappedFrameworkInfo);
+}
+
+void CGameFramework::UpdateShaderVariables()
+{
+	m_pcbMappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GetTotalTime();
+	m_pcbMappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
+	m_pd3dCommandList->SetGraphicsRootConstantBufferView(6, d3dGpuVirtualAddress);
+}
+
+void CGameFramework::ReleaseShaderVariables()
+{
+	if (m_pd3dcbFrameworkInfo)
+	{
+		m_pd3dcbFrameworkInfo->Unmap(0, NULL);
+		m_pd3dcbFrameworkInfo->Release();
+	}
+}
+
 
 void CGameFramework::ProcessInput()
 {
@@ -530,12 +560,18 @@ void CGameFramework::MoveToNextFrame()
 //#define _WITH_PLAYER_TOP
 
 void CGameFramework::FrameAdvance()
-{    
+{
 	m_GameTimer.Tick(0.0f);
-	
+
 	ProcessInput();
 
-    AnimateObjects();
+	AnimateObjects();
+
+	if (game_scene != NULL && start_scene->Get_Start_Signal())
+	{
+		start_scene->Set_Start_Signal(false);
+		rendering_scene = game_scene;
+	}
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
@@ -561,6 +597,11 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
+	if (rendering_scene)
+	{
+		rendering_scene->OnPrepareRender(m_pd3dCommandList, m_pCamera);
+		UpdateShaderVariables();
+	}
 	if (rendering_scene) 
 		rendering_scene->Render(m_pd3dCommandList, NULL); // 각 씬에 있는 플레이어의 카메라 불러와서 그걸로 렌더링 
 

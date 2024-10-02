@@ -198,7 +198,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dDescriptorRanges[2].RegisterSpace = 0;
 	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[6];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[7];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
@@ -212,7 +212,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights
+	pd3dRootParameters[2].Descriptor.ShaderRegister =3; //Lights
 	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
@@ -231,6 +231,10 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]); // SkyBox의 텍스쳐
 	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[6].Descriptor.ShaderRegister = 4; //Framework Info
+	pd3dRootParameters[6].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
 
@@ -377,7 +381,8 @@ void Start_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
 	m_pDescriptorHeap = new CDescriptorHeap();
-	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 17 + 50 + 1 + 1 + 2); // 다른 씬에서 쓸 SRV 개수까지 미리 생성
+	//현재 버튼 개수 : 6개
+	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 17 + 50 + 1 + 1 + 6); // 다른 씬에서 쓸 SRV 개수까지 미리 생성 
 
 //	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 3); // 0 : Button(2) + 1
 
@@ -459,7 +464,7 @@ ID3D12RootSignature* Start_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3d
 	pd3dDescriptorRanges[2].RegisterSpace = 0;
 	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[6];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[7];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
@@ -473,7 +478,7 @@ ID3D12RootSignature* Start_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3d
 	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights
+	pd3dRootParameters[2].Descriptor.ShaderRegister = 3; //Lights
 	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
@@ -492,6 +497,10 @@ ID3D12RootSignature* Start_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3d
 	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]); // SkyBox의 텍스쳐
 	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[6].Descriptor.ShaderRegister = 4; //Framework Info
+	pd3dRootParameters[6].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
 
@@ -559,11 +568,16 @@ void Start_Scene::ReleaseUploadBuffers()
 
 bool Start_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	bool isClicked = false;
+
 	switch (nMessageID)
 	{
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	{
+		if (selected_screen_info != "")
+			break;
+
 		int mouseX = LOWORD(lParam);
 		int mouseY = HIWORD(lParam);
 
@@ -573,15 +587,23 @@ bool Start_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 		float screen_x = (static_cast<float>(mouseX) / (width / 2)) - 1.0f;
 		float screen_y = 1.0f - (static_cast<float>(mouseY) / (height / 2));
 
-		selected_screen_info = PickObjectPointedByCursor(screen_x, screen_y, NULL);
+		selected_screen_info = screen_shader->PickObjectPointedByCursor(screen_x, screen_y, NULL);
 		if (selected_screen_info != "")
 			DebugOutput(selected_screen_info);
 
+		if (selected_screen_info == "menu_button")
+			screen_shader->pause_screen_ptr->active = !screen_shader->pause_screen_ptr->active;
+
+		if (selected_screen_info == "start_button")
+			start_button_down = true;
 	}
 	break;
+
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
 		::ReleaseCapture();
+		selected_screen_info = "";
+
 		break;
 	case WM_MOUSEMOVE:
 		break;
@@ -657,48 +679,11 @@ void Start_Scene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			m_ppShaders[i]->Render(pd3dCommandList, pCamera);
 
 
-
 	if (m_pPlayer)
 		m_pPlayer->Render(pd3dCommandList, pCamera);
 	
 	if (screen_shader)
 		screen_shader->Render(pd3dCommandList, pCamera);
-}
-
-std::string Start_Scene::PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera)
-{
-	XMFLOAT3 xmf3PickPosition = { (float)xClient, (float)yClient, -1.0f };
-
-	XMFLOAT4X4 xmf4x4View = Matrix4x4::Identity();
-
-
-	int nIntersected = 0;
-	float fHitDistance = FLT_MAX, fNearestHitDistance = FLT_MAX;
-
-	Screen_Rect* pNearestObject = NULL;
-
-	Screen_Rect** Check_Objects = (Screen_Rect**)screen_shader->screen_Objects; 
-	int Obj_N = screen_shader->m_nObjects;
-
-	for (int i = 0; i < Obj_N; i++)
-	{
-		nIntersected = Check_Objects[i]->PickObjectByRayIntersection(xmf3PickPosition, xmf4x4View, &fHitDistance);
-
-		if (nIntersected && (fHitDistance < fNearestHitDistance))
-		{
-			fNearestHitDistance = fHitDistance;
-			pNearestObject = Check_Objects[i];
-		}
-	}
-
-	if (pNearestObject != NULL)
-	{
-		std::string name(pNearestObject->m_pstrFrameName);
-		DebugOutput(name);
-		return name;
-	}
-	else
-		return std::string{ "" };
 }
 
 //=============================================================================================
@@ -837,7 +822,7 @@ ID3D12RootSignature* Game_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3dD
 	pd3dDescriptorRanges[2].RegisterSpace = 0;
 	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[6];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[7];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
@@ -851,7 +836,7 @@ ID3D12RootSignature* Game_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3dD
 	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights
+	pd3dRootParameters[2].Descriptor.ShaderRegister = 3; //Lights
 	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
@@ -870,6 +855,10 @@ ID3D12RootSignature* Game_Scene::CreateGraphicsRootSignature(ID3D12Device* pd3dD
 	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]); // SkyBox의 텍스쳐
 	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[6].Descriptor.ShaderRegister = 4; //Framework Info
+	pd3dRootParameters[6].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
 

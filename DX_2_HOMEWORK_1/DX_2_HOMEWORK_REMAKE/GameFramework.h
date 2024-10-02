@@ -7,6 +7,12 @@
 #include "Player.h"
 #include "Scene.h"
 
+struct CB_FRAMEWORK_INFO
+{
+	float					m_fCurrentTime;
+	float					m_fElapsedTime;
+};
+
 class CGameFramework
 {
 public:
@@ -29,6 +35,10 @@ public:
 
     void BuildObjects();
     void ReleaseObjects();
+
+	void CreateShaderVariables();
+	void UpdateShaderVariables();
+	void ReleaseShaderVariables();
 
     void ProcessInput();
     void AnimateObjects();
@@ -80,6 +90,7 @@ private:
 
 	CScene						*rendering_scene = NULL;
 	Start_Scene					*start_scene = NULL;
+	bool Game_Start = false;
 	Game_Scene				*game_scene = NULL;
 	CPlayer						*m_pPlayer = NULL;
 	CCamera						*m_pCamera = NULL;
@@ -87,5 +98,9 @@ private:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+
+protected:
+	ID3D12Resource* m_pd3dcbFrameworkInfo = NULL;
+	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
 };
 

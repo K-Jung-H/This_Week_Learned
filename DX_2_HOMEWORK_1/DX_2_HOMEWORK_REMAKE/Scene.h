@@ -133,6 +133,7 @@ class Start_Scene : public CScene
 {
 private:
 	std::string selected_screen_info;
+	bool start_button_down = false;
 public:
 	Start_Scene();
 	~Start_Scene();
@@ -153,8 +154,10 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	virtual void ReleaseUploadBuffers();
+	
+	void Set_Start_Signal(bool n) { start_button_down = n; }
+	bool Get_Start_Signal() { return start_button_down; }
 
-	std::string PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera);
 };
 
 //=====================================================================

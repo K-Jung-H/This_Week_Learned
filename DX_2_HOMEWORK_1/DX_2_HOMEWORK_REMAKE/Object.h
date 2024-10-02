@@ -307,5 +307,8 @@ public:
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
-	virtual int PickObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, XMFLOAT4X4& xmf4x4View, float* pfHitDistance);
+	Screen_Rect* PickScreenObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, float* pfHitDistance);
+
+public:
+	bool active = true;
 };

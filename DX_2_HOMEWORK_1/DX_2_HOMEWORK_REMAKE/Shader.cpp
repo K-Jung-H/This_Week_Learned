@@ -165,7 +165,8 @@ D3D12_BLEND_DESC CShader::CreateBlendState()
 	::ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
 	d3dBlendDesc.AlphaToCoverageEnable = FALSE;
 	d3dBlendDesc.IndependentBlendEnable = FALSE;
-	d3dBlendDesc.RenderTarget[0].BlendEnable = FALSE;
+
+	d3dBlendDesc.RenderTarget[0].BlendEnable = TRUE;
 	d3dBlendDesc.RenderTarget[0].LogicOpEnable = FALSE;
 	d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
 	d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
@@ -214,7 +215,7 @@ void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 //
 ScreenShader::ScreenShader()
 {
-	m_nObjects = 3;
+
 }
 ScreenShader::~ScreenShader()
 {
@@ -246,6 +247,27 @@ D3D12_SHADER_BYTECODE ScreenShader::CreatePixelShader()
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextureToScreen", "ps_5_1", &m_pd3dPixelShaderBlob));
 
 }
+D3D12_BLEND_DESC ScreenShader::CreateBlendState()
+{
+	D3D12_BLEND_DESC d3dBlendDesc;
+	::ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
+	d3dBlendDesc.AlphaToCoverageEnable = FALSE;
+	d3dBlendDesc.IndependentBlendEnable = FALSE;
+	d3dBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+	d3dBlendDesc.RenderTarget[0].LogicOpEnable = FALSE;
+	d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA; // 소스 알파
+	d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA; // 1 - 소스 알파
+	d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD; // 더하기
+	d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE; // 소스 알파(모드 변경 가능)
+	d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO; // 대상 알파
+	d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD; // 알파 블렌드 연산
+	d3dBlendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP; // 로직 연산 없음
+	d3dBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // 모든 채널에 쓰기 가능
+
+
+	return(d3dBlendDesc);
+}
+
 
 void ScreenShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
@@ -262,37 +284,80 @@ void ScreenShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	screen_Objects = new CGameObject * [m_nObjects];
-
+	m_nObjects = 2;
+	screen_Objects = new Screen_Rect * [m_nObjects];
 
 	CTexture* main_screen_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	main_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/background_image.dds", RESOURCE_TEXTURE2D, 0);
-	screen_Objects[0] = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, main_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 10);
-
-	const char* back_screen_txt = "back_screen";
-	std::copy(back_screen_txt, back_screen_txt + std::strlen(back_screen_txt) + 1, screen_Objects[0]->m_pstrFrameName);
-
-
-	//================================================================================
-
-
 	CTexture* start_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	start_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/play_button.dds", RESOURCE_TEXTURE2D, 0);
-	screen_Objects[1] = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, start_button_texture, XMFLOAT2(0.3f, -0.6f), XMFLOAT2(0.9f, -0.9f), 1);
+	CTexture* menu_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 
-	const char* start_txt = "start_button";
-	std::copy(start_txt, start_txt + std::strlen(start_txt) + 1, screen_Objects[1]->m_pstrFrameName);
+	CTexture* pause_screen_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* pause_menu_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* option_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+
+	main_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/background_image.dds", RESOURCE_TEXTURE2D, 0);
+	start_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/play_button.dds", RESOURCE_TEXTURE2D, 0);
+	menu_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/menu_button.dds", RESOURCE_TEXTURE2D, 0);
+	
+	pause_menu_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/alpha.dds", RESOURCE_TEXTURE2D, 0);
+	pause_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/pause_background.dds", RESOURCE_TEXTURE2D, 0);
+	option_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/option_button.dds", RESOURCE_TEXTURE2D, 0);
+
 
 
 	//================================================================================
+	const char* main_screen_txt = "main_screen";
+	
+	main_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, main_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 10);
+	std::copy(main_screen_txt, main_screen_txt + std::strlen(main_screen_txt) + 1, main_screen_ptr->m_pstrFrameName);
+
+	screen_Objects[0] = main_screen_ptr;
+
+	//================================================================================
+	const char* start_txt = "start_button";
+
+	Screen_Rect* start_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, start_button_texture, XMFLOAT2(0.3f, -0.6f), XMFLOAT2(0.9f, -0.9f), 1);
+	std::copy(start_txt, start_txt + std::strlen(start_txt) + 1, start_button->m_pstrFrameName);
+
+	screen_Objects[0]->SetChild(start_button);
+	start_button_ptr = start_button;
+
+	//================================================================================
+	const char* menu_txt = "menu_button";
+
+	Screen_Rect* menu_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, menu_button_texture, XMFLOAT2(0.7f, 0.9f), XMFLOAT2(0.9f, 0.7f), 1);
+
+	std::copy(menu_txt, menu_txt + std::strlen(menu_txt) + 1, menu_button->m_pstrFrameName);
+
+	screen_Objects[0]->SetChild(menu_button);
+	menu_button_ptr = menu_button;
 
 
-	CTexture* option_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	start_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/option_button.dds", RESOURCE_TEXTURE2D, 0);
-	screen_Objects[2] = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, start_button_texture, XMFLOAT2(0.5f, 0.9f), XMFLOAT2(0.9f, 0.6f), 1);
+	//================================================================================
+	const char* pause_screen_txt = "pause_screen";
 
+	pause_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, pause_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 9);
+	std::copy(pause_screen_txt, pause_screen_txt + std::strlen(pause_screen_txt) + 1, pause_screen_ptr->m_pstrFrameName);
+
+	pause_screen_ptr->active = false;
+
+	screen_Objects[1] = pause_screen_ptr;
+
+	//================================================================================
+	const char* pause_menu_txt = "pause_menu";
+
+	Screen_Rect* pause_menu = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, pause_menu_texture, XMFLOAT2(-0.75f, 0.9f), XMFLOAT2(0.75f, -0.8f), 8);
+	std::copy(pause_menu_txt, pause_menu_txt + std::strlen(pause_menu_txt) + 1, pause_screen_ptr->m_pstrFrameName);
+
+	screen_Objects[1]->SetChild(pause_menu);
+
+	//================================================================================
 	const char* option_txt = "option_button";
-	std::copy(option_txt, option_txt + std::strlen(option_txt) + 1, screen_Objects[2]->m_pstrFrameName);
+
+	Screen_Rect* option_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, option_button_texture, XMFLOAT2(-0.5f, 0.9f), XMFLOAT2(0.5f, 0.6f), 1);
+	std::copy(option_txt, option_txt + std::strlen(option_txt) + 1, option_button->m_pstrFrameName);
+
+	pause_menu->SetChild(option_button);
 
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -326,10 +391,49 @@ void ScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	{
 		if (screen_Objects[j])
 		{
-			screen_Objects[j]->Render(pd3dCommandList, pCamera);
+			if(screen_Objects[j]->active)
+				screen_Objects[j]->Render(pd3dCommandList, pCamera);
 		}
 	}
 }
+
+std::string ScreenShader::PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera)
+{
+	XMFLOAT3 xmf3PickPosition = { (float)xClient, (float)yClient, -1.0f };
+
+	float fHitDistance = FLT_MAX, fNearestHitDistance = FLT_MAX;
+
+	Screen_Rect* pNearestObject = NULL;
+	Screen_Rect* pPicked_Object = NULL;
+
+
+	Screen_Rect** Check_Objects = (Screen_Rect**)screen_Objects;
+	int Obj_N = m_nObjects;
+
+	for (int i = 0; i < Obj_N; i++)
+	{
+		if (Check_Objects[i]->active == false)
+			continue;
+
+		pPicked_Object = Check_Objects[i]->PickScreenObjectByRayIntersection(xmf3PickPosition, &fHitDistance);
+
+		if (pPicked_Object != NULL && (fHitDistance < fNearestHitDistance))
+		{
+			fNearestHitDistance = fHitDistance;
+			pNearestObject = pPicked_Object;
+		}
+	}
+
+	if (pNearestObject != NULL)
+	{
+		std::string name(pNearestObject->m_pstrFrameName);
+		DebugOutput(name);
+		return name;
+	}
+	else
+		return std::string{ "" };
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

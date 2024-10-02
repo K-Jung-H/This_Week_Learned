@@ -20,6 +20,12 @@ cbuffer cbGameObjectInfo : register(b2)
 	uint		gnTexturesMask : packoffset(c8);
 };
 
+cbuffer cbFrameworkInfo : register(b4)
+{
+    float gfCurrentTime : packoffset(c0.x);
+    float gfElapsedTime : packoffset(c0.y);
+};
+
 #include "Light.hlsl"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -164,11 +170,27 @@ VS_SCREEN_TEXTURED_OUTPUT VSTextureToScreen(VS_SCREEN_TEXTURED_INPUT input)
 
 float4 PSTextureToScreen(VS_SCREEN_TEXTURED_OUTPUT input) : SV_TARGET
 {
+    float waveFrequency = 5.0f; // 파도 주파수
+    float waveAmplitude = 0.05f; // 파도 강도
+
+    // 텍스처 샘플링
     float4 cColor = Default_Texture.Sample(gssWrap, input.uv);
-	
+
     if (cColor.w == 0.0f)
         discard;
 
+    if (cColor.r + cColor.g + cColor.b <= 0.1f)
+    {
+        cColor.a = 0.8f;
+        return (cColor);
+    }
 
-    return (cColor);
-}
+	// 파도 효과
+    cColor.r += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f) * waveAmplitude; 
+    cColor.g += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 1.0f) * waveAmplitude; 
+    cColor.b += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 2.0f) * waveAmplitude; 
+	
+
+
+        return (cColor);
+    }

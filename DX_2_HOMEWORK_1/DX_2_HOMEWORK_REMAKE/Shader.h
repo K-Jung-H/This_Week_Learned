@@ -71,6 +71,7 @@ public:
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
+	virtual D3D12_BLEND_DESC CreateBlendState();
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
@@ -81,8 +82,16 @@ public:
 
 	virtual void ReleaseUploadBuffers();
 
+	std::string PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera);
 public:
-	CGameObject** screen_Objects = 0;
+	Screen_Rect** screen_Objects = 0;
+
+	Screen_Rect* main_screen_ptr = NULL;
+	Screen_Rect* start_button_ptr = NULL;
+	Screen_Rect* menu_button_ptr = NULL;
+	
+	Screen_Rect* pause_screen_ptr = NULL;
+
 	int								m_nObjects = 0;
 };
 
