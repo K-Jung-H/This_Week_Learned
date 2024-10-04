@@ -16,6 +16,11 @@ void DebugOutput(const std::string& message) {
 	OutputDebugString((wMessage + L"\n").c_str());
 }
 
+float Lerp(float a, float b, float t)
+{
+	return a + (b - a) * t;
+}
+
 void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
 {
 	HRESULT hResult = pd3dCommandQueue->Signal(pd3dFence, nFenceValue);

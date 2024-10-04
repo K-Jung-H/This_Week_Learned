@@ -75,8 +75,13 @@ public:
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	
+	bool Scroll_Update(float fTimeElapsed, float value);
 	virtual void AnimateObjects(float fTimeElapsed);
 	virtual void ReleaseObjects();
+
+	void Set_Start_Sceen_UI();
+	void Set_Game_Sceen_UI();
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
 
@@ -88,9 +93,32 @@ public:
 
 	Screen_Rect* main_screen_ptr = NULL;
 	Screen_Rect* start_button_ptr = NULL;
+	Screen_Rect* option_icon_button_ptr = NULL;
+	Screen_Rect* info_icon_button_ptr = NULL;
+
+	Screen_Rect* info_screen_ptr = NULL;
+	Screen_Rect* play_info_ptr = NULL;
+
+
 	Screen_Rect* menu_button_ptr = NULL;
 	
 	Screen_Rect* pause_screen_ptr = NULL;
+	Screen_Rect* pause_menu_box_ptr = NULL;
+
+	Screen_Rect* option_screen_ptr = NULL;
+	Screen_Rect* option_menu_box_ptr = NULL;
+
+	Screen_Rect* option_player_speed_ptr = NULL;
+	Screen_Rect* option_player_speed_minus_button_ptr = NULL;
+	Screen_Rect* option_player_speed_plus_button_ptr = NULL;
+
+	Screen_Rect* option_stone_speed_ptr = NULL;
+	Screen_Rect* option_stone_speed_minus_button_ptr = NULL;
+	Screen_Rect* option_stone_speed_plus_button_ptr = NULL;
+
+	Screen_Rect* option_difficulty_ptr = NULL;
+	Screen_Rect* option_difficulty_minus_button_ptr = NULL;
+	Screen_Rect* option_difficulty_plus_button_ptr = NULL;
 
 	int								m_nObjects = 0;
 };

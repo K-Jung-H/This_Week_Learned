@@ -298,6 +298,12 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 };
 
+
+struct CB_Screen_Rect_INFO
+{
+	XMFLOAT4X4 transform_info;
+};
+
 class Screen_Rect : public CGameObject
 {
 public:
@@ -305,10 +311,25 @@ public:
 		ScreenShader* screen_shader, CTexture* texture, XMFLOAT2 l_t, XMFLOAT2 r_b, int camera_distance); // camera_distance는 깊이값을 이용한 그리기 우선순위 설정
 	virtual ~Screen_Rect();
 
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+
+
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	Screen_Rect* PickScreenObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, float* pfHitDistance);
+	
 
 public:
 	bool active = true;
+	bool sissor_rect_clip = false;
+	D3D12_RECT sissor_rect_screen_size;
+	float scroll_value = 0.0f;
+
+
+protected:
+	ID3D12Resource* m_pd3dcbScreen_Rect_Info = NULL;
+	CB_Screen_Rect_INFO* m_pcbMappedScreen_Rect_Info = NULL;
 };

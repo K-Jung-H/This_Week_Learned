@@ -48,8 +48,11 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR *pszFileName, LPCSTR 
 	ID3DBlob *pd3dErrorBlob = NULL;
 	HRESULT hResult = ::D3DCompileFromFile(pszFileName, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, pszShaderName, pszShaderProfile, nCompileFlags, 0, ppd3dShaderBlob, &pd3dErrorBlob);
 	char *pErrorString = NULL;
-	if (pd3dErrorBlob) pErrorString = (char *)pd3dErrorBlob->GetBufferPointer();
-
+	if (pd3dErrorBlob)
+	{
+		pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
+		DebugOutput(pErrorString);
+	}
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
 	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
@@ -284,30 +287,57 @@ void ScreenShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	m_nObjects = 2;
+	m_nObjects = 5;
 	screen_Objects = new Screen_Rect * [m_nObjects];
 
 	CTexture* main_screen_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	CTexture* start_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	CTexture* menu_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* info_icon_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* play_info_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 
-	CTexture* pause_screen_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+
+	CTexture* alpha_screen_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	CTexture* pause_menu_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+
 	CTexture* option_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* continue_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* exit_button_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* option_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+
+	CTexture* text_box_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* left_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* right_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* x_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* check_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+
+
 
 	main_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/background_image.dds", RESOURCE_TEXTURE2D, 0);
-	start_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/play_button.dds", RESOURCE_TEXTURE2D, 0);
-	menu_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/menu_button.dds", RESOURCE_TEXTURE2D, 0);
+	start_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/play_button_red.dds", RESOURCE_TEXTURE2D, 0);
+	option_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/option_icon.dds", RESOURCE_TEXTURE2D, 0);
 	
-	pause_menu_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/alpha.dds", RESOURCE_TEXTURE2D, 0);
-	pause_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/pause_background.dds", RESOURCE_TEXTURE2D, 0);
-	option_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/option_button.dds", RESOURCE_TEXTURE2D, 0);
+	info_icon_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/info_icon_button.dds", RESOURCE_TEXTURE2D, 0);
+	play_info_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Play_Info.dds", RESOURCE_TEXTURE2D, 0);
 
+	menu_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/menu_button_red.dds", RESOURCE_TEXTURE2D, 0);
+
+	pause_menu_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/menu_background_red.dds", RESOURCE_TEXTURE2D, 0);
+	alpha_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/pause_background.dds", RESOURCE_TEXTURE2D, 0);
+	option_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/option_button_red.dds", RESOURCE_TEXTURE2D, 0);
+	continue_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/continue_button_red.dds", RESOURCE_TEXTURE2D, 0);
+	exit_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/exit_button_red.dds", RESOURCE_TEXTURE2D, 0);
+
+	text_box_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/TextBox.dds", RESOURCE_TEXTURE2D, 0);
+	left_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Left_icon_button.dds", RESOURCE_TEXTURE2D, 0);
+	right_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Right_icon_button.dds", RESOURCE_TEXTURE2D, 0);
+	check_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/check_button.dds", RESOURCE_TEXTURE2D, 0);
+	x_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/x_button.dds", RESOURCE_TEXTURE2D, 0);
 
 
 	//================================================================================
 	const char* main_screen_txt = "main_screen";
-	
+
 	main_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, main_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 10);
 	std::copy(main_screen_txt, main_screen_txt + std::strlen(main_screen_txt) + 1, main_screen_ptr->m_pstrFrameName);
 
@@ -319,48 +349,264 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	Screen_Rect* start_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, start_button_texture, XMFLOAT2(0.3f, -0.6f), XMFLOAT2(0.9f, -0.9f), 1);
 	std::copy(start_txt, start_txt + std::strlen(start_txt) + 1, start_button->m_pstrFrameName);
 
-	screen_Objects[0]->SetChild(start_button);
+	main_screen_ptr->SetChild(start_button);
 	start_button_ptr = start_button;
 
 	//================================================================================
-	const char* menu_txt = "menu_button";
+	const char* option_icon_txt = "option_icon_button";
 
-	Screen_Rect* menu_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, menu_button_texture, XMFLOAT2(0.7f, 0.9f), XMFLOAT2(0.9f, 0.7f), 1);
+	Screen_Rect* option_icon_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, option_icon_texture, XMFLOAT2(0.7f, 0.9f), XMFLOAT2(0.9f, 0.7f), 1);
 
-	std::copy(menu_txt, menu_txt + std::strlen(menu_txt) + 1, menu_button->m_pstrFrameName);
+	std::copy(option_icon_txt, option_icon_txt + std::strlen(option_icon_txt) + 1, option_icon_button->m_pstrFrameName);
 
-	screen_Objects[0]->SetChild(menu_button);
-	menu_button_ptr = menu_button;
-
-
-	//================================================================================
-	const char* pause_screen_txt = "pause_screen";
-
-	pause_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, pause_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 9);
-	std::copy(pause_screen_txt, pause_screen_txt + std::strlen(pause_screen_txt) + 1, pause_screen_ptr->m_pstrFrameName);
-
-	pause_screen_ptr->active = false;
-
-	screen_Objects[1] = pause_screen_ptr;
+	main_screen_ptr->SetChild(option_icon_button);
+	option_icon_button_ptr = option_icon_button;
 
 	//================================================================================
-	const char* pause_menu_txt = "pause_menu";
+	const char* info_icon_txt = "info_icon_button";
 
-	Screen_Rect* pause_menu = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, pause_menu_texture, XMFLOAT2(-0.75f, 0.9f), XMFLOAT2(0.75f, -0.8f), 8);
-	std::copy(pause_menu_txt, pause_menu_txt + std::strlen(pause_menu_txt) + 1, pause_screen_ptr->m_pstrFrameName);
+	info_icon_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, info_icon_button_texture, XMFLOAT2(-0.9f, 0.9f), XMFLOAT2(-0.7f, 0.7f), 1);
 
-	screen_Objects[1]->SetChild(pause_menu);
+	std::copy(info_icon_txt, info_icon_txt + std::strlen(info_icon_txt) + 1, info_icon_button_ptr->m_pstrFrameName);
+
+	main_screen_ptr->SetChild(info_icon_button_ptr);
+	{
+		//================================================================================
+		const char* info_screen_txt = "info_screen";
+
+		info_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, alpha_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 10);
+
+		std::copy(info_screen_txt, info_screen_txt + std::strlen(info_screen_txt) + 1, info_screen_ptr->m_pstrFrameName);
+
+		screen_Objects[1] = info_screen_ptr;
+
+		//================================================================================
+		const char* play_info_txt = "play_info";
+
+		play_info_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, play_info_texture, XMFLOAT2(-0.75f, 0.7f), XMFLOAT2(0.75f, -0.7f), 8);
+
+		std::copy(play_info_txt, play_info_txt + std::strlen(play_info_txt) + 1, play_info_ptr->m_pstrFrameName);
+
+		info_screen_ptr->SetChild(play_info_ptr);
+
+	}
+
+	{
+		//================================================================================
+		const char* pause_screen_txt = "pause_screen";
+
+		pause_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, alpha_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 9);
+		std::copy(pause_screen_txt, pause_screen_txt + std::strlen(pause_screen_txt) + 1, pause_screen_ptr->m_pstrFrameName);
+
+		screen_Objects[2] = pause_screen_ptr;
+
+		//================================================================================
+		const char* pause_menu_txt = "pause_menu";
+
+		pause_menu_box_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, pause_menu_texture, XMFLOAT2(-0.75f, 1.0f), XMFLOAT2(0.75f, -0.7f), 8);
+		std::copy(pause_menu_txt, pause_menu_txt + std::strlen(pause_menu_txt) + 1, pause_screen_ptr->m_pstrFrameName);
+
+		pause_screen_ptr->SetChild(pause_menu_box_ptr);
+
+		//================================================================================
+		const char* continue_txt = "continue_button";
+
+		Screen_Rect* continue_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, continue_button_texture, XMFLOAT2(-0.4f, 0.6f), XMFLOAT2(0.4f, 0.3f), 1);
+		std::copy(continue_txt, continue_txt + std::strlen(continue_txt) + 1, continue_button->m_pstrFrameName);
+
+		pause_menu_box_ptr->SetChild(continue_button);
+
+		//================================================================================
+		const char* option_txt = "option_button";
+
+		Screen_Rect* option_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, option_button_texture, XMFLOAT2(-0.4f, 0.25f), XMFLOAT2(0.4f, -0.05f), 1);
+		std::copy(option_txt, option_txt + std::strlen(option_txt) + 1, option_button->m_pstrFrameName);
+
+		pause_menu_box_ptr->SetChild(option_button);
+		//================================================================================
+		const char* exit_txt = "exit_button";
+
+		Screen_Rect* exit_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, exit_button_texture, XMFLOAT2(-0.4f, -0.1f), XMFLOAT2(0.4f, -0.4f), 1);
+		std::copy(exit_txt, exit_txt + std::strlen(exit_txt) + 1, exit_button->m_pstrFrameName);
+
+		pause_menu_box_ptr->SetChild(exit_button);
+	}
+		//================================================================================
+		const char* menu_txt = "menu_icon_button";
+
+		Screen_Rect* menu_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, menu_button_texture, XMFLOAT2(0.7f, 0.9f), XMFLOAT2(0.9f, 0.7f), 1);
+
+		std::copy(menu_txt, menu_txt + std::strlen(menu_txt) + 1, menu_button->m_pstrFrameName);
+
+		screen_Objects[3] = menu_button;
+		menu_button_ptr = menu_button;
+	
+	//================================================================================
+	const char* option_screen_txt = "option_screen";
+
+	option_screen_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, alpha_screen_texture, XMFLOAT2(-1.0f, 1.0f), XMFLOAT2(1.0f, -1.0f), 9);
+
+	std::copy(option_screen_txt, option_screen_txt + std::strlen(option_screen_txt) + 1, option_screen_ptr->m_pstrFrameName);
+
+	screen_Objects[4] = option_screen_ptr;
 
 	//================================================================================
-	const char* option_txt = "option_button";
+	const char* option_menu_txt = "option_menu";
 
-	Screen_Rect* option_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, option_button_texture, XMFLOAT2(-0.5f, 0.9f), XMFLOAT2(0.5f, 0.6f), 1);
-	std::copy(option_txt, option_txt + std::strlen(option_txt) + 1, option_button->m_pstrFrameName);
+	option_menu_box_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, pause_menu_texture, XMFLOAT2(-0.95f, 1.0f), XMFLOAT2(0.95f, -0.7f), 8);
 
-	pause_menu->SetChild(option_button);
+	std::copy(option_menu_txt, option_menu_txt + std::strlen(option_menu_txt) + 1, option_menu_box_ptr->m_pstrFrameName);
 
+	option_screen_ptr->SetChild(option_menu_box_ptr);
+	//================================================================================
+	{
+		const char* option_player_speed_txt = "option_player_speed";
+
+		option_player_speed_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, 0.6f), XMFLOAT2(0.4f, 0.3f), 1);
+
+		std::copy(option_player_speed_txt, option_player_speed_txt + std::strlen(option_player_speed_txt) + 1, option_player_speed_ptr->m_pstrFrameName);
+
+		option_menu_box_ptr->SetChild(option_player_speed_ptr);
+
+		//================================================================================
+		const char* option_player_speed_minus_txt = "option_player_speed_minus";
+
+		option_player_speed_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, 0.6f), XMFLOAT2(-0.4f, 0.3f), 1);
+
+		std::copy(option_player_speed_minus_txt, option_player_speed_minus_txt + std::strlen(option_player_speed_minus_txt) + 1, option_player_speed_minus_button_ptr->m_pstrFrameName);
+
+		option_player_speed_ptr->SetChild(option_player_speed_minus_button_ptr);
+
+		//================================================================================
+		const char* option_player_speed_plus_txt = "option_player_speed_plus";
+
+		option_player_speed_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, 0.6f), XMFLOAT2(0.6f, 0.3f), 1);
+
+		std::copy(option_player_speed_plus_txt, option_player_speed_plus_txt + std::strlen(option_player_speed_plus_txt) + 1, option_player_speed_plus_button_ptr->m_pstrFrameName);
+
+		option_player_speed_ptr->SetChild(option_player_speed_plus_button_ptr);
+	}
+	{
+		//================================================================================
+		const char* option_stone_speed_txt = "option_stone_speed";
+
+		option_stone_speed_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, 0.25f), XMFLOAT2(0.4f, -0.05f), 1);
+
+		std::copy(option_stone_speed_txt, option_stone_speed_txt + std::strlen(option_stone_speed_txt) + 1, option_stone_speed_ptr->m_pstrFrameName);
+
+		option_menu_box_ptr->SetChild(option_stone_speed_ptr);
+
+		//================================================================================
+		const char* option_stone_speed_minus_txt = "option_stone_speed_minus";
+
+		option_stone_speed_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, 0.25f), XMFLOAT2(-0.4f, -0.05f), 1);
+
+		std::copy(option_stone_speed_minus_txt, option_stone_speed_minus_txt + std::strlen(option_stone_speed_minus_txt) + 1, option_stone_speed_minus_button_ptr->m_pstrFrameName);
+
+		option_stone_speed_ptr->SetChild(option_stone_speed_minus_button_ptr);
+
+		//================================================================================
+		const char* option_stone_speed_plus_txt = "option_stone_speed_plus";
+
+		option_stone_speed_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, 0.25f), XMFLOAT2(0.6f, -0.05f), 1);
+
+		std::copy(option_stone_speed_plus_txt, option_stone_speed_plus_txt + std::strlen(option_stone_speed_plus_txt) + 1, option_stone_speed_plus_button_ptr->m_pstrFrameName);
+
+		option_stone_speed_ptr->SetChild(option_stone_speed_plus_button_ptr);
+	}
+	{
+		//================================================================================
+		const char* option_difficulty_txt = "option_difficulty";
+
+		option_difficulty_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, -0.1f), XMFLOAT2(0.4f, -0.4f), 1);
+
+		std::copy(option_difficulty_txt, option_difficulty_txt + std::strlen(option_difficulty_txt) + 1, option_difficulty_ptr->m_pstrFrameName);
+
+		option_menu_box_ptr->SetChild(option_difficulty_ptr);
+
+		//================================================================================
+		const char* option_difficulty_minus_txt = "option_difficulty_minus";
+
+		option_difficulty_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, -0.1f), XMFLOAT2(-0.4f, -0.4f), 1);
+
+		std::copy(option_difficulty_minus_txt, option_difficulty_minus_txt + std::strlen(option_difficulty_minus_txt) + 1, option_difficulty_minus_button_ptr->m_pstrFrameName);
+
+		option_difficulty_ptr->SetChild(option_difficulty_minus_button_ptr);
+
+		//================================================================================
+		const char* option_difficulty_plus_txt = "option_difficulty_plus";
+
+		option_difficulty_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, -0.1), XMFLOAT2(0.6f, -0.4f), 1);
+
+		std::copy(option_difficulty_plus_txt, option_difficulty_plus_txt + std::strlen(option_difficulty_plus_txt) + 1, option_difficulty_plus_button_ptr->m_pstrFrameName);
+
+		option_difficulty_ptr->SetChild(option_difficulty_plus_button_ptr);
+	}
+	//================================================================================
+
+	const char* x_button_txt = "x_button";
+
+	Screen_Rect* x_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, x_icon_texture, XMFLOAT2(-0.3f, -0.6f), XMFLOAT2(-0.1f, -0.8f), 1);
+
+	std::copy(x_button_txt, x_button_txt + std::strlen(x_button_txt) + 1, x_button->m_pstrFrameName);
+
+	option_menu_box_ptr->SetChild(x_button);
+	//================================================================================
+
+	const char* check_button_txt = "check_button";
+
+	Screen_Rect* check_button = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, check_icon_texture, XMFLOAT2(0.1f, -0.6f), XMFLOAT2(0.3f, -0.8f), 1);
+
+	std::copy(check_button_txt, check_button_txt + std::strlen(check_button_txt) + 1, check_button->m_pstrFrameName);
+
+	option_menu_box_ptr->SetChild(check_button);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void ScreenShader::Set_Start_Sceen_UI()
+{
+	for (int j = 0; j < m_nObjects; j++)
+		if (screen_Objects[j])
+			screen_Objects[j]->active = false;
+
+	main_screen_ptr->active = true;
+	option_icon_button_ptr->active = true;
+}
+
+void ScreenShader::Set_Game_Sceen_UI()
+{
+	for (int j = 0; j < m_nObjects; j++)
+		if (screen_Objects[j])
+			screen_Objects[j]->active = false;
+
+	menu_button_ptr->active = true;
+	
+}
+
+bool ScreenShader::Scroll_Update(float fTimeElapsed, float value)
+{
+	static float currentScrollValue = 0.0f;
+	float lerpSpeed = 2.0f;                   
+
+	float t = lerpSpeed * fTimeElapsed;
+
+	std::vector<Screen_Rect*> scroll_list;
+	scroll_list.push_back(play_info_ptr);
+
+	for(Screen_Rect* sr_ptr : scroll_list)
+		if (sr_ptr)
+		{
+			currentScrollValue += (value - sr_ptr->scroll_value) * t;
+			sr_ptr->scroll_value = currentScrollValue;
+			sr_ptr->scroll_value = std::clamp(sr_ptr->scroll_value, -0.4f, 0.4f);
+
+			sr_ptr->sissor_rect_clip = true; // 시저렉트 적용할 객체들
+
+			if (abs(sr_ptr->scroll_value) == 0.4f)
+				return false;
+		}
+	return true;
 }
 void ScreenShader::AnimateObjects(float fTimeElapsed)
 {
@@ -391,7 +637,6 @@ void ScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	{
 		if (screen_Objects[j])
 		{
-			if(screen_Objects[j]->active)
 				screen_Objects[j]->Render(pd3dCommandList, pCamera);
 		}
 	}

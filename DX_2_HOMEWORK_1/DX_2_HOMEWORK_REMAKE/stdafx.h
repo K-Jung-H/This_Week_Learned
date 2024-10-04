@@ -22,6 +22,7 @@
 
 #include <fstream>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -87,6 +88,7 @@ inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT
 
 // 디버그 메시지 출력함수
 extern void DebugOutput(const std::string& message);
+extern float Lerp(float a, float b, float t);
 
 
 namespace Vector3

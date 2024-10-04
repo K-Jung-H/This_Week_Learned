@@ -894,24 +894,66 @@ Screen_Rect::Screen_Rect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	CMaterial* pScreenMaterial = new CMaterial();
 	pScreenMaterial->SetTexture(pScreen_Texture);
 
-	//pScreenMaterial->SetShader(screen_shader); 
-	// 이거 하면 무한루프 걸림, 스크린 객체 그리기 과정에서 연결된 셰이더 객체 렌더링 호출 
-	// -> 셰이더에 있는 객체들 모두 렌더링 
-	// -> 다시 이 객체 그리기
-
 	SetMaterial(0, pScreenMaterial);
+
+	sissor_rect_screen_size = D3D12_RECT();
+	sissor_rect_screen_size.left = static_cast<UINT>((l_t.x + 1.0f) * 0.5f * FRAME_BUFFER_WIDTH);
+	sissor_rect_screen_size.top = static_cast<UINT>((1.0f - l_t.y) * 0.5f * FRAME_BUFFER_HEIGHT);
+	sissor_rect_screen_size.right = static_cast<UINT>((r_b.x + 1.0f) * 0.5f * FRAME_BUFFER_WIDTH);
+	sissor_rect_screen_size.bottom = static_cast<UINT>((1.0f - r_b.y) * 0.5f * FRAME_BUFFER_HEIGHT);
 }
 
 Screen_Rect::~Screen_Rect()
 {
 }
 
+void Screen_Rect::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(CB_Screen_Rect_INFO) + 255) & ~255); //256의 배수
+	m_pd3dcbScreen_Rect_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	m_pd3dcbScreen_Rect_Info->Map(0, NULL, (void**)&m_pcbMappedScreen_Rect_Info);
+}
+
+void Screen_Rect::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	XMFLOAT4X4 matrix_temp = Matrix4x4::Identity();
+	matrix_temp._24 = scroll_value;
+	m_pcbMappedScreen_Rect_Info->transform_info = matrix_temp;
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbScreen_Rect_Info->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(7, d3dGpuVirtualAddress);
+}
+
+void Screen_Rect::ReleaseShaderVariables()
+{
+	if (m_pd3dcbScreen_Rect_Info)
+	{
+		m_pd3dcbScreen_Rect_Info->Unmap(0, NULL);
+		m_pd3dcbScreen_Rect_Info->Release();
+	}
+}
+
 void Screen_Rect::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	if (active == false)
+		return;
+
 	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 	SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 
+	UpdateShaderVariables(pd3dCommandList); // for scroll
+	
+	//pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
+
+	if (sissor_rect_clip)
+	{
+		//pCamera->SetScissorRect(0, 50, FRAME_BUFFER_WIDTH, 430);
+		pd3dCommandList->RSSetScissorRects(1, &sissor_rect_screen_size);
+	}
 	CGameObject::Render(pd3dCommandList, pCamera);
+
+	if (sissor_rect_clip)
+		pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 }
 
 Screen_Rect* Screen_Rect::PickScreenObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, float* pfHitDistance)

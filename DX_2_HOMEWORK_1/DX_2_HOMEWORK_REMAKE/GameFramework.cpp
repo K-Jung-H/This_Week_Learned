@@ -361,10 +361,12 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
         case WM_MOUSEMOVE:
+		case WM_MOUSEWHEEL:
 			rendering_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
             break;
-        case WM_KEYDOWN:
+
+		case WM_KEYDOWN:
         case WM_KEYUP:
 			rendering_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
@@ -418,16 +420,17 @@ void CGameFramework::BuildObjects()
 
 
 	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature());
-
 	game_player->SetPosition(XMFLOAT3(0.0f, -10.0f, 0.0f));
+
 	start_scene->m_pPlayer = m_pPlayer = game_player;
+	game_scene->m_pPlayer = game_player;
+	
 	m_pCamera = m_pPlayer->GetCamera();
 
+	game_scene->screen_shader = start_scene->screen_shader;
+	
 	rendering_scene = start_scene;
-
-
-	game_player->SetPosition(XMFLOAT3(0.0f, -10.0f, 0.0f));
-	game_scene->m_pPlayer = game_player;
+	rendering_scene->screen_shader->Set_Start_Sceen_UI();
 
 	CreateShaderVariables();
 
@@ -525,7 +528,8 @@ void CGameFramework::AnimateObjects()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	if (rendering_scene) rendering_scene->AnimateObjects(fTimeElapsed);
+	if (rendering_scene) 
+		rendering_scene->AnimateObjects(fTimeElapsed);
 
 	m_pPlayer->Animate(fTimeElapsed, NULL);
 }
@@ -570,6 +574,7 @@ void CGameFramework::FrameAdvance()
 	if (game_scene != NULL && start_scene->Get_Start_Signal())
 	{
 		start_scene->Set_Start_Signal(false);
+		rendering_scene->screen_shader->Set_Game_Sceen_UI();
 		rendering_scene = game_scene;
 	}
 

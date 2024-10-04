@@ -146,6 +146,11 @@ float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 
 //================================================================
 
+cbuffer cbScreenInfo : register(b5)
+{
+    matrix Screen_Transform: packoffset(c0);
+};
+
 struct VS_SCREEN_TEXTURED_INPUT
 {
     float3 position : SCREEN_POSITION;
@@ -162,9 +167,9 @@ VS_SCREEN_TEXTURED_OUTPUT VSTextureToScreen(VS_SCREEN_TEXTURED_INPUT input)
 {
     VS_SCREEN_TEXTURED_OUTPUT output;
 
-    output.position = float4(input.position, 1.0f);
+    output.position = mul(float4(input.position, 1.0f), Screen_Transform);
     output.uv = input.uv;
-
+	
     return (output);
 }
 
@@ -189,8 +194,6 @@ float4 PSTextureToScreen(VS_SCREEN_TEXTURED_OUTPUT input) : SV_TARGET
     cColor.r += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f) * waveAmplitude; 
     cColor.g += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 1.0f) * waveAmplitude; 
     cColor.b += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 2.0f) * waveAmplitude; 
-	
 
-
-        return (cColor);
-    }
+	return (cColor);
+}

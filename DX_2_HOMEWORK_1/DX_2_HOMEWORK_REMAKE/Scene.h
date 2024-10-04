@@ -134,6 +134,7 @@ class Start_Scene : public CScene
 private:
 	std::string selected_screen_info;
 	bool start_button_down = false;
+	float scroll_value = 0;
 public:
 	Start_Scene();
 	~Start_Scene();
@@ -144,7 +145,7 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseObjects();
 
-	virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
+	//virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
 	virtual ID3D12RootSignature* GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	virtual bool ProcessInput(UCHAR* pKeysBuffer);
@@ -173,7 +174,7 @@ protected:
 	ID3D12Resource* m_pd3dcbLights = NULL;
 	LIGHTS* m_pcbMappedLights = NULL;
 
-
+	std::string selected_screen_info;
 public:
 	Game_Scene();
 	~Game_Scene();
@@ -189,7 +190,7 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseObjects();
 
-	virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
+	//virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
 	virtual ID3D12RootSignature* GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	virtual bool ProcessInput(UCHAR* pKeysBuffer);
