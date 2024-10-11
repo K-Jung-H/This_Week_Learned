@@ -44,6 +44,8 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
+	//절두체(월드 좌표계)
+	BoundingFrustum m_xmFrustum;
 public:
 	CCamera();
 	CCamera(CCamera *pCamera);
@@ -63,6 +65,9 @@ public:
 	void SetScissorRect(LONG xLeft, LONG yTop, LONG xRight, LONG yBottom);
 
 	virtual void SetViewportsAndScissorRects(ID3D12GraphicsCommandList *pd3dCommandList);
+
+	void GenerateFrustum();
+	bool IsInFrustum(BoundingOrientedBox& xmBoundingBox);
 
 	void SetPlayer(CPlayer *pPlayer) { m_pPlayer = pPlayer; }
 	CPlayer *GetPlayer() { return(m_pPlayer); }

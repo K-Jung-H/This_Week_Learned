@@ -233,9 +233,33 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
 	if (nCameraMode == THIRD_PERSON_CAMERA)
 	{
-		if (m_pShader) m_pShader->Render(pd3dCommandList, pCamera, 0);
+		if (m_pShader) 
+			m_pShader->Render(pd3dCommandList, pCamera, 0);
 		CGameObject::Render(pd3dCommandList, pCamera);
+
+		if (CObjectsShader::Show_Collider)
+		{
+			if (m_player_bounding_box)
+			{
+				oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
+				oobb_drawer->UpdateOOBB_Data(pd3dCommandList, this);
+				oobb_drawer->Render(pd3dCommandList, pCamera);
+			}
+		}
 	}
+
+}
+
+BoundingOrientedBox* CPlayer::GetCollider()
+{
+	// 기존 바운딩 박스를 가져옵니다.
+	BoundingOrientedBox* PlayerBoundingBox = new BoundingOrientedBox(*m_player_bounding_box);
+
+	PlayerBoundingBox->Center = GetPosition();
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	XMStoreFloat4(&PlayerBoundingBox->Orientation, quaternionRotation);
+
+	return PlayerBoundingBox;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,17 +267,19 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 CAirplanePlayer::CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
 {
-	m_pCamera = ChangeCamera(/*SPACESHIP_CAMERA*/THIRD_PERSON_CAMERA, 0.0f);
+	m_pCamera = ChangeCamera(SPACESHIP_CAMERA, 0.0f);
 
 	m_pShader = new CPlayerShader();
 	m_pShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-//	m_pShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1); //Mi24(1)
 
 	CGameObject *pGameObject = CGameObject::LoadGeometryFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Mi24.bin", m_pShader);
 	SetChild(pGameObject);
+	
+	m_player_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(20.0f, 10.0f, 20.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	oobb_drawer = new OOBB_Drawer();
+	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	PrepareAnimate();
-
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
@@ -319,9 +345,9 @@ CCamera *CAirplanePlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case THIRD_PERSON_CAMERA:
-			SetFriction(20.5f);
+			SetFriction(20.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
-			SetMaxVelocityXZ(25.5f);
+			SetMaxVelocityXZ(50.5f);
 			SetMaxVelocityY(20.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);

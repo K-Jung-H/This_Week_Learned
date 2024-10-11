@@ -362,14 +362,14 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_RBUTTONUP:
         case WM_MOUSEMOVE:
 		case WM_MOUSEWHEEL:
-			rendering_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+			rendering_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
             break;
 
 		case WM_KEYDOWN:
         case WM_KEYUP:
-			rendering_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			rendering_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			break;
 	}
 	return(0);
@@ -420,7 +420,7 @@ void CGameFramework::BuildObjects()
 
 
 	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature());
-	game_player->SetPosition(XMFLOAT3(0.0f, -10.0f, 0.0f));
+	game_player->SetPosition(XMFLOAT3(0.0f, 100.0f, 0.0f));
 
 	start_scene->m_pPlayer = m_pPlayer = game_player;
 	game_scene->m_pPlayer = game_player;
@@ -470,7 +470,7 @@ void CGameFramework::UpdateShaderVariables()
 	m_pcbMappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
-	m_pd3dCommandList->SetGraphicsRootConstantBufferView(6, d3dGpuVirtualAddress);
+	m_pd3dCommandList->SetGraphicsRootConstantBufferView(7, d3dGpuVirtualAddress);
 }
 
 void CGameFramework::ReleaseShaderVariables()
@@ -518,7 +518,7 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 1.25f, true);
+			if (dwDirection) m_pPlayer->Move(dwDirection, 10.0f, true);
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
@@ -565,7 +565,7 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {
-	m_GameTimer.Tick(0.0f);
+	m_GameTimer.Tick(60.0f);
 
 	ProcessInput();
 
@@ -576,6 +576,7 @@ void CGameFramework::FrameAdvance()
 		start_scene->Set_Start_Signal(false);
 		rendering_scene->screen_shader->Set_Game_Sceen_UI();
 		rendering_scene = game_scene;
+		m_pCamera = rendering_scene->m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	}
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();

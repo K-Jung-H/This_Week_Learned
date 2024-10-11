@@ -42,6 +42,7 @@ protected:
 
 	XMFLOAT3						m_xmf3AABBCenter = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	XMFLOAT3						m_xmf3AABBExtents = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	BoundingOrientedBox*		mesh_bounding_box = NULL;
 
 	D3D12_PRIMITIVE_TOPOLOGY		m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	UINT							m_nSlot = 0;
@@ -56,7 +57,7 @@ protected:
 	ID3D12Resource					*m_pd3dPositionUploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dPositionBufferView;
 
-	int								m_nSubMeshes = 0;
+
 	int								*m_pnSubSetIndices = NULL;
 	UINT							**m_ppnSubSetIndices = NULL;
 
@@ -66,13 +67,32 @@ protected:
 
 public:
 	UINT GetType() { return(m_nType); }
-
+	int								m_nSubMeshes = 0;
 	virtual void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
-
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet, UINT nInstances);
 	virtual  int CheckRayIntersection(XMFLOAT3& xmf3RayOrigin, XMFLOAT3& xmf3RayDirection, float* pfNearHitDistance);
+	BoundingOrientedBox* GetBoundingBox() { return mesh_bounding_box; }
+
+	void CalculateTriangleListVertexNormals(XMFLOAT3* pxmf3Normals, XMFLOAT3* pxmf3Positions, int nVertices);
+	void CalculateTriangleListVertexNormals(XMFLOAT3* pxmf3Normals, XMFLOAT3* pxmf3Positions, UINT nVertices, UINT* pnIndices, UINT nIndices);
+	void CalculateTriangleStripVertexNormals(XMFLOAT3* pxmf3Normals, XMFLOAT3* pxmf3Positions, UINT nVertices, UINT* pnIndices, UINT nIndices);
+	void CalculateVertexNormals(XMFLOAT3* pxmf3Normals, XMFLOAT3* pxmf3Positions, int nVertices, UINT* pnIndices, int nIndices);
+
+	bool Check_Polygon_Ray_Normal(XMVECTOR start_pos, XMVECTOR dir, XMFLOAT3* polygon_normal_vector);
+	bool CheckRayTriangleIntersection(XMVECTOR ray_start, XMVECTOR rayDirection, XMVECTOR v0, XMVECTOR v1, XMVECTOR v2, XMVECTOR& faceNormal, float& closestHitDistance);
 };
 
+
+
+class OOBBMesh : public CMesh
+{
+public:
+	OOBBMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth = 1.0f, float fHeight = 1.0f, float fDepth = 1.0f);
+	virtual ~OOBBMesh();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
+};
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CSkyBoxMesh : public CMesh
@@ -96,7 +116,23 @@ protected:
 	ID3D12Resource					*m_pd3dTextureCoord0Buffer = NULL;
 	ID3D12Resource					*m_pd3dTextureCoord0UploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dTextureCoord0BufferView;
+	//-------------------------------------------------------
+	XMFLOAT2* m_pxmf2TextureCoords1 = NULL;
 
+	ID3D12Resource* m_pd3dTextureCoord1Buffer = NULL;
+	ID3D12Resource* m_pd3dTextureCoord1UploadBuffer = NULL;
+	D3D12_VERTEX_BUFFER_VIEW		m_d3dTextureCoord1BufferView;
+	//-------------------------------------------------------
+	UINT* m_pnIndices = NULL;
+
+	ID3D12Resource* m_pd3dIndexBuffer = NULL;
+	ID3D12Resource* m_pd3dIndexUploadBuffer = NULL;
+	D3D12_INDEX_BUFFER_VIEW m_d3dIndexBufferView;
+
+	UINT							m_nIndices = 0;
+	UINT							m_nStartIndex = 0;
+	int								m_nBaseVertex = 0;
+	//-------------------------------------------------------
 public:
 	virtual void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
@@ -104,7 +140,6 @@ public:
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
 class Textured_Screen_Mesh : public CTexturedMesh
 {
 public:
@@ -117,7 +152,12 @@ public:
 	virtual int CheckRayIntersection(XMFLOAT3& xmf3RayOrigin, XMFLOAT3& xmf3RayDirection, float* pfNearHitDistance);
 };
 
-
+class Billboard_Mesh : public CTexturedMesh
+{
+public:
+	Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f);
+	virtual ~Billboard_Mesh();
+};
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CStandardMesh : public CMesh
@@ -159,5 +199,81 @@ public:
 
 	virtual void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
+};
+
+class Textured_Cube_Mesh : public CStandardMesh
+{
+public:
+	Textured_Cube_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth = 2.0f, float fHeight = 2.0f, float fDepth = 2.0f);
+	virtual ~Textured_Cube_Mesh();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
+
+};
+
+class Asteroid_Mesh : public Textured_Cube_Mesh
+{
+public:
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet, UINT ninstance);
+};
+
+class CRawFormatImage
+{
+protected:
+	BYTE* m_pRawImagePixels = NULL;
+
+	int							m_nWidth;
+	int							m_nLength;
+
+public:
+	CRawFormatImage(LPCTSTR pFileName, int nWidth, int nLength, bool bFlipY = false);
+	~CRawFormatImage(void);
+
+	BYTE GetRawImagePixel(int x, int z) { return(m_pRawImagePixels[x + (z * m_nWidth)]); }
+	void SetRawImagePixel(int x, int z, BYTE nPixel) { m_pRawImagePixels[x + (z * m_nWidth)] = nPixel; }
+
+	BYTE* GetRawImagePixels() { return(m_pRawImagePixels); }
+
+	int GetRawImageWidth() { return(m_nWidth); }
+	int GetRawImageLength() { return(m_nLength); }
+};
+
+class CHeightMapImage : public CRawFormatImage
+{
+protected:
+	XMFLOAT3					m_xmf3Scale;
+
+public:
+	CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale);
+	~CHeightMapImage(void);
+
+	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
+	float GetHeight(float x, float z, bool bReverseQuad = false);
+	XMFLOAT3 GetHeightMapNormal(int x, int z);
+};
+
+class CHeightMapGridMesh : public CStandardMesh
+{
+protected:
+	int							m_nWidth;
+	int							m_nLength;
+	XMFLOAT3					m_xmf3Scale;
+
+public:
+	CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void* pContext = NULL);
+	virtual ~CHeightMapGridMesh();
+
+	virtual void ReleaseUploadBuffers();
+
+
+	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
+	int GetWidth() { return(m_nWidth); }
+	int GetLength() { return(m_nLength); }
+
+	virtual float OnGetHeight(int x, int z, void* pContext);
+	virtual XMFLOAT4 OnGetColor(int x, int z, void* pContext);
+
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
 };
 

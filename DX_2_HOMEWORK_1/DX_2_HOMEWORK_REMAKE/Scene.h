@@ -104,7 +104,7 @@ public:
 
 
 	CSkyBox								*m_pSkyBox = NULL;
-
+	CHeightMapTerrain* m_pTerrain = NULL;
 
 
 public:
@@ -162,6 +162,7 @@ public:
 };
 
 //=====================================================================
+class CObjectsShader;
 
 class Game_Scene : public CScene
 {
@@ -175,6 +176,9 @@ protected:
 	LIGHTS* m_pcbMappedLights = NULL;
 
 	std::string selected_screen_info;
+
+	bool Show_Collider = false;
+
 public:
 	Game_Scene();
 	~Game_Scene();
@@ -200,4 +204,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	virtual void ReleaseUploadBuffers();
+
+	void Collision_Defender(CPlayer* player_ptr, CObjectsShader* pshader);
 };

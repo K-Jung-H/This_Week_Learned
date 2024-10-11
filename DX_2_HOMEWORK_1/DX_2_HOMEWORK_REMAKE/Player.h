@@ -34,6 +34,7 @@ protected:
 	CCamera						*m_pCamera = NULL;
 
 	CShader						*m_pShader = NULL;
+	BoundingOrientedBox* m_player_bounding_box = NULL;
 
 public:
 	CPlayer();
@@ -81,6 +82,8 @@ public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+
+	virtual BoundingOrientedBox* GetCollider();
 };
 
 class CAirplanePlayer : public CPlayer
