@@ -7,6 +7,47 @@
 #include "Shader.h"
 #include "Scene.h"
 
+XMFLOAT3 GetOrthogonalVector(const XMFLOAT3& axis)
+{
+	// axis를 XMVECTOR로 변환
+	XMVECTOR axisVec = XMLoadFloat3(&axis);
+
+	// 벡터가 영벡터인지 확인
+	if (XMVector3Equal(axisVec, XMVectorZero()))
+	{
+		// 영벡터인 경우 기본 수직 벡터를 반환
+		return XMFLOAT3(1.0f, 0.0f, 0.0f); // 기본 수직 벡터
+	}
+
+	// 기준 벡터 선택 (여기서는 Y축을 선택)
+	XMVECTOR basisVec = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	// axis와 기준 벡터가 같은 방향인 경우 X축을 기준으로 사용
+	if (XMVector3Equal(axisVec, basisVec))
+	{
+		basisVec = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	// 외적을 사용하여 수직 벡터를 구함
+	XMVECTOR orthogonalVec = XMVector3Cross(axisVec, basisVec);
+
+	// 수직 벡터를 정규화
+	orthogonalVec = XMVector3Normalize(orthogonalVec);
+
+	// 결과가 영벡터인지 확인
+	if (XMVector3Equal(orthogonalVec, XMVectorZero()))
+	{
+		// 영벡터인 경우 기본 수직 벡터를 반환
+		return XMFLOAT3(1.0f, 0.0f, 0.0f); // 기본 수직 벡터
+	}
+
+	// 결과를 XMFLOAT3로 변환하여 반환
+	XMFLOAT3 result;
+	XMStoreFloat3(&result, orthogonalVec);
+	return result;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers, int nRootParameters)
@@ -399,6 +440,9 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 
 void CGameObject::Animate(float fTimeElapsed, XMFLOAT4X4 *pxmf4x4Parent)
 {
+	if (m_fMovingSpeed != 0.0f && active)
+		Move(m_xmf3MovingDirection, m_fMovingSpeed * fTimeElapsed);
+
 	if (m_pSibling) m_pSibling->Animate(fTimeElapsed, pxmf4x4Parent);
 	if (m_pChild) m_pChild->Animate(fTimeElapsed, &m_xmf4x4World);
 }
@@ -590,6 +634,11 @@ void CGameObject::MoveForward(float fDistance)
 	XMFLOAT3 xmf3Look = GetLook();
 	xmf3Position = Vector3::Add(xmf3Position, xmf3Look, fDistance);
 	CGameObject::SetPosition(xmf3Position);
+}
+
+void CGameObject::Move(XMFLOAT3& vDirection, float fSpeed)
+{
+	SetPosition(m_xmf4x4World._41 + vDirection.x * fSpeed, m_xmf4x4World._42 + vDirection.y * fSpeed, m_xmf4x4World._43 + vDirection.z * fSpeed);
 }
 
 void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
@@ -973,7 +1022,11 @@ bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CG
 
 	// 회전 행렬을 기준으로 BoundingOrientedBox에 적용할 변환 행렬을 구성
 	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
-	XMMATRIX scaleMatrix = XMMatrixScaling(XMVectorGetX(extents), XMVectorGetY(extents), XMVectorGetZ(extents));
+	XMMATRIX scaleMatrix = XMMatrixScaling(
+		2.0f * XMVectorGetX(extents),
+		2.0f * XMVectorGetY(extents),
+		2.0f * XMVectorGetZ(extents));
+
 	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(center);
 
 	// 최종 월드 행렬 계산 (스케일, 회전, 이동 순서로 적용)
@@ -1264,13 +1317,13 @@ void CMi24Object::Animate(float fTimeElapsed, XMFLOAT4X4 *pxmf4x4Parent)
 CRotatingObject::CRotatingObject() : CGameObject()
 {
 	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	m_fRotationSpeed = 0.0f;
+	m_fRotationSpeed = 10.0f;
 }
 
 CRotatingObject::CRotatingObject(int nmaterial) : CGameObject(nmaterial)
 {
 	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	m_fRotationSpeed = 00.0f;
+	m_fRotationSpeed = 10.0f;
 }
 
 CRotatingObject::~CRotatingObject()
@@ -1311,12 +1364,11 @@ void Flying_Box::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 }
 
 Asteroid::Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) 
-	: CRotatingObject(1)
+	: CRotatingObject(2)
 {
 	PrepareAnimate();
 	oobb_drawer = new OOBB_Drawer();
 	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
 	culling_type = Culling_Type::Need_Culling;
 
 }
@@ -1326,6 +1378,16 @@ Asteroid::~Asteroid()
 
 void Asteroid::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
 {
+	XMFLOAT3 axis = GetMovingDirection();
+	XMFLOAT3 new_axis = GetOrthogonalVector(axis);
+	SetRotationAxis(new_axis);
+
+	float speed = GetMovingSpeed();
+	if (speed > 30.0f)
+		SetRotationSpeed(30.0f);
+	else
+		SetRotationSpeed(60.0f);
+
 	CRotatingObject::Animate(fTimeElapsed, pxmf4x4Parent);
 }
 
@@ -1353,7 +1415,7 @@ void Asteroid::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCame
 			}
 
 			if (m_pMesh)
-				((Asteroid_Mesh*)m_pMesh)->Asteroid_Mesh::Render(pd3dCommandList, i, Overlaped_Box_N);
+				((Asteroid_Mesh*)m_pMesh)->Asteroid_Mesh::Render(pd3dCommandList, 0, Overlaped_Box_N);
 
 		}
 	}
@@ -1364,8 +1426,6 @@ void Asteroid::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCame
 Billboard_Object::Billboard_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 	: CRotatingObject(1)
 {
-	SetRotationSpeed(30.0f);
-	SetRotationAxis(XMFLOAT3(0.0f, .0f, 1.0f));
 }
 
 Billboard_Object::~Billboard_Object()
@@ -1376,4 +1436,55 @@ void Billboard_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
 {
 	CRotatingObject::Animate(fTimeElapsed, pxmf4x4Parent);
 
+}
+//==================================================
+
+Billboard_Animation_Object::Billboard_Animation_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+	: Billboard_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature)
+{
+	sprite_index = 0;
+	active = true;
+}
+
+Billboard_Animation_Object::~Billboard_Animation_Object()
+{
+}
+
+void Billboard_Animation_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
+{
+	sprite_index += 1; // sprite_index를 0 ~ 47 범위로 증가시킴
+	if (sprite_index >= 48)
+		active = false;
+	
+	CRotatingObject::Animate(fTimeElapsed, pxmf4x4Parent);
+}
+
+void Billboard_Animation_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	pd3dCommandList->SetGraphicsRoot32BitConstants(11, 1, &sprite_index, 0); 
+
+	OnPrepareRender();
+
+	if (culling_type == Culling_Type::Need_Culling)
+		if (!IsVisible(pCamera))
+			return;
+
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+	if (m_nMaterials > 0)
+	{
+		for (int i = 0; i < m_nMaterials; i++)
+		{
+			if (m_ppMaterials[i])
+			{
+				if (m_ppMaterials[i]->m_pShader)
+					m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+
+				m_ppMaterials[i]->UpdateShaderVariables(pd3dCommandList);
+			}
+
+			if (m_pMesh)
+				((Billboard_Mesh*)m_pMesh)->Render(pd3dCommandList, true);
+		}
+	}
 }

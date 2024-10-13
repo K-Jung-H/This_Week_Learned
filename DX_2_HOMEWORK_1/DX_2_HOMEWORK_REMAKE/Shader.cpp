@@ -889,6 +889,79 @@ void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 }
 
 
+//================================================
+
+Outline_Shader::Outline_Shader()
+{
+}
+
+Outline_Shader::~Outline_Shader()
+{
+}
+
+D3D12_DEPTH_STENCIL_DESC Outline_Shader::CreateDepthStencilState()
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+
+	//깊이-검사를 하지 않으므로 여러 개의 객체들이 겹쳐지는 것처럼 그려진다.
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	return(d3dDepthStencilDesc);
+}
+
+
+D3D12_INPUT_LAYOUT_DESC Outline_Shader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 3;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE Outline_Shader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSOutline", "vs_5_1", &m_pd3dVertexShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Outline_Shader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSOutline", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+void Outline_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CShader::CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+}
+
+void Outline_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
+{
+	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
+}
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CStandardShader::CStandardShader()
@@ -962,41 +1035,49 @@ void CObjectsShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 
 void CObjectsShader::ReleaseObjects()
 {
-	if (m_ppObjects)
+	for (CGameObject* obj_ptr : m_ppObjects)
 	{
-		for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->Release();
-		delete[] m_ppObjects;
+		if (obj_ptr)
+			obj_ptr->Release();
 	}
+	m_ppObjects.clear();
 }
 
 void CObjectsShader::AnimateObjects(float fTimeElapsed)
 {
-	for (int i = 0; i < m_nObjects; ++i)
-		m_ppObjects[i]->Animate(fTimeElapsed);
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+		if (obj_ptr)
+			obj_ptr->Animate(fTimeElapsed);
+	}
 }
 
 void CObjectsShader::ReleaseUploadBuffers()
 {
-	for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->ReleaseUploadBuffers();
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+		if (obj_ptr)
+			obj_ptr->ReleaseUploadBuffers();
+	}
 }
 
 void CObjectsShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, int nPipelineState)
 {
 	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
 
-	for (int j = 0; j < m_nObjects; j++)
+	for(CGameObject* obj_ptr : m_ppObjects)
 	{
-		if (m_ppObjects[j])
+		if (obj_ptr)
 		{
-			m_ppObjects[j]->UpdateTransform(NULL);
-			m_ppObjects[j]->Render(pd3dCommandList, pCamera);
+			obj_ptr->UpdateTransform(NULL);
+			obj_ptr->Render(pd3dCommandList, pCamera);
 		}
 	}
 
 	if (Show_Collider)
 	{
-		for (int j = 0; j < m_nObjects; j++)
-			m_ppObjects[j]->Collider_Render(pd3dCommandList, pCamera);
+		for (CGameObject* obj_ptr : m_ppObjects)
+			obj_ptr->Collider_Render(pd3dCommandList, pCamera);
 	}
 }
 
@@ -1102,7 +1183,7 @@ void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CMesh* cube_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, 40.0f, 40.0f, 10.0f);
 	CTexture* cube_texture = new CTexture(2, RESOURCE_TEXTURE2D, 0, 1);
 	cube_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/box_texture.dds", RESOURCE_TEXTURE2D, 0);
-	cube_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/box_texture_normal.dds", RESOURCE_TEXTURE2D, 1);
+	cube_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/box_texture_normal_2.dds", RESOURCE_TEXTURE2D, 1);
 
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -1112,10 +1193,6 @@ void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CMaterial* pCubeMaterial = new CMaterial();
 	pCubeMaterial->SetTexture(cube_texture);
 	
-	
-	m_nObjects = 25;
-	m_ppObjects = new CGameObject * [m_nObjects];
-
 	//===========================================
 	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)pContext;
 
@@ -1160,13 +1237,14 @@ void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 				box_object = new Flying_Box(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 				box_object->SetMesh(cube_mesh);
 				box_object->SetMaterial(0, pCubeMaterial); 
+
 				box_object->SetPosition(xPosition, fHeight + fyOffset, zPosition);
-				m_ppObjects[nObjects++] = box_object;
-				a = nObjects;
+
+				m_ppObjects.push_back(box_object);
 			}
 		}
 	}
-	a = a;
+
 }
 
 void BOX_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
@@ -1189,11 +1267,12 @@ Asteroid_Shader::~Asteroid_Shader()
 
 D3D12_INPUT_LAYOUT_DESC Asteroid_Shader::CreateInputLayout()
 {
-	UINT nInputElementDescs = 2;
+	UINT nInputElementDescs = 3;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
@@ -1223,24 +1302,29 @@ void Asteroid_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 void Asteroid_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
 	CGameObject* asteroid_ptr = new Asteroid(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-
 	CMesh* asteroid_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 20.0f);
+
+	CMaterial* outline_Material = new CMaterial();
+	outline_Material->SetShader(outline_shader);
+	asteroid_ptr->SetMaterial(0, outline_Material);
+
+
 	CTexture* asteroid_texture = new CTexture(2, RESOURCE_TEXTURE2D, 0, 1);
 	asteroid_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Lava_Emissive.dds", RESOURCE_TEXTURE2D, 0);
 	asteroid_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Lava_Normal.dds", RESOURCE_TEXTURE2D, 1);
-	CMaterial* pAsteroidMaterial = new CMaterial();
-	pAsteroidMaterial->SetTexture(asteroid_texture);
-
 	CScene::CreateShaderResourceViews(pd3dDevice, asteroid_texture, 0, 9);
 
+	CMaterial* pAsteroidMaterial = new CMaterial();
+	pAsteroidMaterial->SetTexture(asteroid_texture);
+	pAsteroidMaterial->SetShader(this);
+	asteroid_ptr->SetMaterial(1, pAsteroidMaterial);
+
 	asteroid_ptr->SetMesh(asteroid_mesh);
-	asteroid_ptr->SetMaterial(0, pAsteroidMaterial);
 	asteroid_ptr->SetPosition(0.0f, 50.0f, 0.0f);
 
-	m_nObjects = 1;
 
-	m_ppObjects = new CGameObject * [m_nObjects];
-	m_ppObjects[0] = asteroid_ptr;
+	m_ppObjects.push_back(asteroid_ptr);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	{
@@ -1296,10 +1380,87 @@ void Asteroid_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	}
 }
 
+void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
+{
+	XMFLOAT3 Target_pos = target_obj->GetPosition();
+
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+		XMFLOAT3 obj_pos = obj_ptr->GetPosition();
+
+		float dx = Target_pos.x - obj_pos.x;
+		float dy = Target_pos.y - obj_pos.y;
+		float dz = Target_pos.z - obj_pos.z;
+		float distance = sqrt(dx * dx + dy * dy + dz * dz);
+
+		Asteroid* obj_info = (Asteroid*)obj_ptr;
+
+		int cool_down = 5.0f;
+		if (distance > 100.0f)
+			cool_down = 1.0f;
+		else
+			cool_down = 0.2f;
+
+		if (obj_info->move_time < 1.0f)
+		{
+			obj_info->move_time += fTimeElapsed;
+			continue;
+		}
+		else
+			obj_info->move_time = 0.0f;
+
+
+		// 방향 벡터 초기화
+		XMFLOAT3 direction = { 0.0f, 0.0f, 0.0f };
+
+		if (distance >= 50.0f)
+		{
+			// 무작위로 x, y, z 축 중 하나 선택
+			int randomAxis = rand() % 3; // 0: x, 1: y, 2: z
+
+			if (randomAxis == 0 && (abs(dx) > 5.0f)) // x축 선택
+				direction.x = (dx > 0) ? 1.0f : -1.0f; // 타겟 방향에 따라 설정
+			else if (randomAxis == 1 && (abs(dy) > 5.0f)) // y축 선택
+				direction.y = (dy > 0) ? 1.0f : -1.0f; // 타겟 방향에 따라 설정
+			else if (randomAxis == 2 && (abs(dz) > 5.0f)) // z축 선택
+				direction.z = (dz > 0) ? 1.0f : -1.0f; // 타겟 방향에 따라 설정
+
+		}
+		if (direction.x == 0.0f && direction.y == 0.0f && direction.z == 0.0f)
+		{
+			float abs_diff[3] = { fabs(dx), fabs(dy), fabs(dz) };
+			int max_index = std::distance(abs_diff, std::max_element(abs_diff, abs_diff + 3));
+
+			if (max_index == 0)
+				direction.x = (dx > 0) ? 1.0f : -1.0f;
+
+			else if (max_index == 1)
+				direction.y = (dy > 0) ? 1.0f : -1.0f;
+			else
+				direction.z = (dz > 0) ? 1.0f : -1.0f;
+		}
+
+		if (distance > 1.0f)
+		{
+			obj_ptr->SetMovingDirection(direction);
+			obj_ptr->SetMovingSpeed(distance);
+		}
+		else
+		{
+			obj_ptr->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
+			obj_ptr->SetMovingSpeed(0.0f);
+		}
+	}
+
+
+	CObjectsShader::AnimateObjects(fTimeElapsed);
+}
+
+
 void Asteroid_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
 {
 	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
-	CObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
+//	CObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
 
 }
 
@@ -1310,6 +1471,30 @@ CBillboardObjectsShader::CBillboardObjectsShader()
 CBillboardObjectsShader::~CBillboardObjectsShader()
 {
 }
+
+
+D3D12_DEPTH_STENCIL_DESC CBillboardObjectsShader::CreateDepthStencilState()
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
 
 D3D12_BLEND_DESC CBillboardObjectsShader::CreateBlendState()
 {
@@ -1385,26 +1570,7 @@ void CBillboardObjectsShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12Graph
 
 void CBillboardObjectsShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	CGameObject* black_hole_ptr = new Billboard_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
-	CMesh* black_hole_mesh = new Billboard_Mesh(pd3dDevice, pd3dCommandList, 100.0f, 100.0f);
-	CTexture* black_hole_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	black_hole_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/blue_hole.dds", RESOURCE_TEXTURE2D, 0);
-
-	CMaterial* pBlackHoleMaterial = new CMaterial();
-	pBlackHoleMaterial->SetTexture(black_hole_texture);
-
-	CScene::CreateShaderResourceViews(pd3dDevice, black_hole_texture, 0, PARAMETER_DEFAULT_TEXTURE);
-
-	black_hole_ptr->SetMesh(black_hole_mesh);
-	black_hole_ptr->SetMaterial(0, pBlackHoleMaterial);
-	black_hole_ptr->SetPosition(300.0f, 100.0f, 300.0f);
-
-	m_nObjects = 1;
-
-	m_ppObjects = new CGameObject * [m_nObjects];
-	m_ppObjects[0] = black_hole_ptr;
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CBillboardObjectsShader::ReleaseUploadBuffers()
@@ -1423,14 +1589,143 @@ void CBillboardObjectsShader::ReleaseObjects()
 void CBillboardObjectsShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
 {
 	XMFLOAT3 xmf3CameraPosition = pCamera->GetPosition();
-	for (int j = 0; j < m_nObjects; ++j)
+
+	for (CGameObject* obj_ptr : m_ppObjects)
 	{
-		if (m_ppObjects[j])
-		{
-			m_ppObjects[j]->SetLookAt(xmf3CameraPosition, XMFLOAT3(0.0f, 1.0f, 0.0f));
-		}
+		if (obj_ptr)
+			obj_ptr->SetLookAt(xmf3CameraPosition, XMFLOAT3(0.0f, 1.0f, 0.0f));
 	}
+
 
 	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
 	CObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
 }
+
+
+Black_Hole_Shader::Black_Hole_Shader()
+{
+}
+
+Black_Hole_Shader::~Black_Hole_Shader()
+{
+}
+
+D3D12_SHADER_BYTECODE Black_Hole_Shader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard_Black_Hole", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+void Black_Hole_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CShader::CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+}
+
+void Black_Hole_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+{
+	CGameObject* black_hole_ptr = new Billboard_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	CMesh* black_hole_mesh = new Billboard_Mesh(pd3dDevice, pd3dCommandList, 100.0f, 100.0f);
+	CTexture* black_hole_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	black_hole_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/blue_hole.dds", RESOURCE_TEXTURE2D, 0);
+
+	CMaterial* pBlackHoleMaterial = new CMaterial();
+	pBlackHoleMaterial->SetTexture(black_hole_texture);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, black_hole_texture, 0, PARAMETER_DEFAULT_TEXTURE);
+
+	black_hole_ptr->SetMesh(black_hole_mesh);
+	black_hole_ptr->SetMaterial(0, pBlackHoleMaterial);
+	black_hole_ptr->SetPosition(300.0f, 100.0f, 300.0f);
+
+	m_ppObjects.push_back(black_hole_ptr);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+
+void Black_Hole_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
+{
+	CBillboardObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
+}
+
+
+//==========================================================================
+
+Sprite_Billboard_Shader::Sprite_Billboard_Shader()
+{
+}
+
+Sprite_Billboard_Shader::~Sprite_Billboard_Shader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC Sprite_Billboard_Shader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 3;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "VERTEX_NUM", 0, DXGI_FORMAT_R32_UINT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE Sprite_Billboard_Shader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VS_Billboard_Animation", "vs_5_1", &m_pd3dVertexShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Sprite_Billboard_Shader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_Billboard_Animation", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+void Sprite_Billboard_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CShader::CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+}
+
+void Sprite_Billboard_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+{
+	CGameObject* boom_ptr = new Billboard_Animation_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	boom_mesh = new Billboard_Mesh(pd3dDevice, pd3dCommandList, 100.0f, 100.0f);
+	CTexture* boom_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	boom_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/boom_sprite.dds", RESOURCE_TEXTURE2D, 0);
+
+	boom_material = new CMaterial();
+	boom_material->SetTexture(boom_texture);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, boom_texture, 0, PARAMETER_DEFAULT_TEXTURE);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void Sprite_Billboard_Shader::Add_Object(XMFLOAT3 pos)
+{
+	CGameObject* boom_obj = new Billboard_Animation_Object(NULL, NULL, NULL);
+	boom_obj->SetMesh(boom_mesh);
+	boom_obj->SetMaterial(0, boom_material);
+	boom_obj->SetPosition(pos);
+
+	m_ppObjects.push_back(boom_obj);
+}
+
+void Sprite_Billboard_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
+{
+	CBillboardObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
+}
+
+

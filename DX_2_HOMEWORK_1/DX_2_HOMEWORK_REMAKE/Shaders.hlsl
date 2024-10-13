@@ -308,10 +308,12 @@ float4 PS_FLYING_BOX(VS_FLYING_BOX_OUTPUT input) : SV_TARGET
     return (cColor);
 }
 
+//=======================================================================
 
 struct VS_INSTANCING_INPUT
 {
     float3 position : POSITION;
+    float3 normal : NORMAL;
     float2 uv : TEXCOORD0;
 };
 struct VS_INSTANCING_OUTPUT
@@ -388,8 +390,34 @@ float4 PS_Instancing_Asteroid(VS_INSTANCING_OUTPUT input) : SV_TARGET
     return (cColor);
 }
 
+// 윤곽선 정점 셰이더
+VS_INSTANCING_OUTPUT VSOutline(VS_INSTANCING_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+    VS_INSTANCING_OUTPUT output;
+    
+    float OutlineThickness = 1.0f;
+    
+    float4x4 rotationMatrix = GetRotationMatrix(nInstanceID);
+    float4x4 finalTransform = mul(rotationMatrix, gmtxGameObject);
+    
+    float4 expandedPosition = float4(input.position + input.normal * OutlineThickness, 1.0f);
+    
+    // 확장된 위치를 변환
+    output.position = mul(mul(mul(expandedPosition, finalTransform), gmtxView), gmtxProjection);
 
-cbuffer cbOOBBInfo : register(b7)
+    return output;
+}
+
+// 픽셀 셰이더
+float4 PSOutline(VS_INSTANCING_OUTPUT input) : SV_TARGET
+{
+    // 윤곽선 색상 설정
+    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+//=======================================================================
+
+cbuffer cbOOBBInfo : register(b6)
 {
     matrix oobb_worldmatrix : packoffset(c0);
     float4 oobb_line_color : packoffset(c4);
@@ -447,7 +475,124 @@ VS_TEXTURED_OUTPUT VSBillboard(VS_TEXTURED_INPUT input)
 float4 PSBillboard(VS_TEXTURED_OUTPUT input) : SV_TARGET
 {
     float4 cColor = Default_Texture.SampleLevel(gssWrap, input.uv, 0);
-
-
     return (cColor);
+}
+
+float4 PSBillboard_Black_Hole(VS_TEXTURED_OUTPUT input) : SV_TARGET
+{
+    // 전역 변수 - 물결 효과 조정
+    float _Tiling = 1.0f; // 텍스처 타일링
+    float _WaveSpeed = 8.0f; // 물결 속도
+    float _WaveFrequency = 10.0f; // 물결의 주파수 (파동의 빈도)
+    float _WaveAmplitude = 0.05f; // 물결의 진폭 (물결의 강도)
+    
+    // UV 좌표를 중앙 기준으로 이동하여 왜곡 준비
+    float2 uv = (input.uv - 0.5) * _Tiling;
+
+    // 텍스처 중앙(0.5, 0.5)로부터의 거리 계산
+    float dis = distance(float2(0.0, 0.0), uv);
+
+    // 시간에 따른 원형 물결 효과
+    float ripple = sin(dis * _WaveFrequency - gfCurrentTime * _WaveSpeed) * _WaveAmplitude;
+
+    // 물결 효과를 UV에 적용하여 왜곡된 UV 좌표 계산
+    float2 distortedUV = uv + ripple * normalize(uv);
+
+    // UV 좌표를 원래 위치로 복원
+    distortedUV += 0.5;
+
+    // 텍스처에서 왜곡된 UV 좌표로 색상 샘플링
+    float4 cColor = Default_Texture.SampleLevel(gssWrap, distortedUV, 0);
+
+    return cColor;
+}
+
+
+
+
+cbuffer Sprite_Index_Buffer : register(b7)
+{
+    uint sprite_index;
+}
+
+struct VS_SPRITE_BILLBOARD_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+    uint vertex_num : VERTEX_NUM; // uint로 수정
+};
+
+struct VS_SPRITE_BILLBOARD_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD;
+    uint vertex_num : VERTEX_NUM;
+};
+
+// UV 좌표 계산 함수
+float2 Loading_Sprite_UV(uint vertex_num)
+{
+    float2 uv;
+    
+    uint spriteCols = 8; // 가로 스프라이트 수
+    uint spriteRows = 6; // 세로 스프라이트 수
+    float spriteWidth = 1.0f / spriteCols; // 각 스프라이트의 너비
+    float spriteHeight = 1.0f / spriteRows; // 각 스프라이트의 높이
+    
+    if (vertex_num == 0)
+    {
+        uv.x = (sprite_index % 8) * spriteWidth;
+        uv.y = (sprite_index / 8) * spriteHeight;
+    }
+    else if (vertex_num == 1)
+    {
+        uv.x = (sprite_index % 8) * spriteWidth + spriteWidth;
+        uv.y = (sprite_index / 8) * spriteHeight;
+    }
+    else if (vertex_num == 2)
+    {
+        uv.x = (sprite_index % 8) * spriteWidth + spriteWidth;
+        uv.y = (sprite_index / 8) * spriteHeight + spriteHeight;
+    }
+    else if (vertex_num == 3)
+    {
+        uv.x = (sprite_index % 8) * spriteWidth;
+        uv.y = (sprite_index / 8) * spriteHeight;
+    }
+    else if (vertex_num == 4)
+    {
+        uv.x = (sprite_index % 8) * spriteWidth + spriteWidth;
+        uv.y = (sprite_index / 8) * spriteHeight + spriteHeight;
+    }
+    else if (vertex_num == 5)
+    {
+        uv.x = (sprite_index % 8) * spriteWidth;
+        uv.y = (sprite_index / 8) * spriteHeight + spriteHeight;
+    }
+    return uv;
+}
+
+VS_SPRITE_BILLBOARD_OUTPUT VS_Billboard_Animation(VS_SPRITE_BILLBOARD_INPUT input)
+{
+    VS_SPRITE_BILLBOARD_OUTPUT output;
+
+    // 행렬 곱셈의 괄호 수정
+    output.position = mul(mul(float4(input.position, 1.0f), gmtxGameObject), mul(gmtxView, gmtxProjection));
+    
+    // UV 좌표를 계산하여 output에 저장
+    output.uv = Loading_Sprite_UV(input.vertex_num);
+    output.vertex_num = input.vertex_num;
+    
+    return output;
+}
+
+float4 PS_Billboard_Animation(VS_SPRITE_BILLBOARD_OUTPUT input) : SV_TARGET
+{
+    // 픽셀 셰이더에서는 이미 계산된 UV 좌표를 사용합니다.
+    float2 uv = input.uv;
+
+    // 텍스처에서 색상을 샘플링합니다.
+    float4 cColor = Default_Texture.Sample(gssWrap, uv);
+    
+    return cColor; // 샘플링된 색상을 반환
 }

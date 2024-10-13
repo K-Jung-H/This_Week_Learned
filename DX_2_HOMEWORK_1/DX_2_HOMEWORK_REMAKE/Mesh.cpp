@@ -571,22 +571,45 @@ Billboard_Mesh::Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_pxmf3Positions[4] = XMFLOAT3(right, bottom, 0.0f), m_pxmf2TextureCoords0[4] = XMFLOAT2(1.0f, 1.0f);
 	m_pxmf3Positions[5] = XMFLOAT3(left, bottom, 0.0f), m_pxmf2TextureCoords0[5] = XMFLOAT2(0.0f, 1.0f);
 
-
+	//====================================================
 	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
+	//====================================================
 	m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
 
 	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
 	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
 	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	//====================================================
+	AnimationVertexinfo = new UINT[m_nVertices];
+
+	for (int i = 0; i < m_nVertices; i++)
+		AnimationVertexinfo[i] = i;
+
+	m_pd3dAnimationVertexinfoBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, AnimationVertexinfo, sizeof(UINT) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dAnimationVertexinfoUploadBuffer);
+
+	m_d3dAnimationVertexinfoBufferView.BufferLocation = m_pd3dAnimationVertexinfoBuffer->GetGPUVirtualAddress();
+	m_d3dAnimationVertexinfoBufferView.StrideInBytes = sizeof(UINT);
+	m_d3dAnimationVertexinfoBufferView.SizeInBytes = sizeof(UINT) * m_nVertices;
 }
 Billboard_Mesh::~Billboard_Mesh()
 {
 
+}
+
+void Billboard_Mesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool animation)
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[3] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dAnimationVertexinfoBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 3, pVertexBufferViews);
+
+	pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -806,7 +829,7 @@ Textured_Cube_Mesh::Textured_Cube_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
 
 
-	mesh_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fWidth * 1.3f, fHeight * 1.3f, fDepth * 1.3f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	mesh_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fx, fy, fz), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 
 }
 
@@ -837,8 +860,8 @@ void Asteroid_Mesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubS
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
-	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[2] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView};
-	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews);
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[3] = { m_d3dPositionBufferView, m_d3dNormalBufferView, m_d3dTextureCoord0BufferView};
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 3, pVertexBufferViews);
 
 	if ((m_nSubMeshes > 0) && (nSubSet < m_nSubMeshes))
 	{

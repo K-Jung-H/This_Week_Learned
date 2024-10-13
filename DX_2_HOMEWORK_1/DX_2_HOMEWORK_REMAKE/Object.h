@@ -204,14 +204,20 @@ public:
 	XMFLOAT4X4						m_xmf4x4Transform;
 	XMFLOAT4X4						m_xmf4x4World;
 
+	XMFLOAT3					m_xmf3MovingDirection = XMFLOAT3(0.0f, 0.0f, 1.0f);
+	float						m_fMovingSpeed = 0.0f;
+	float						m_fMovingRange = 0.0f;
+
 	CGameObject 					*m_pParent = NULL;
 	CGameObject 					*m_pChild = NULL;
 	CGameObject 					*m_pSibling = NULL;
 
 	OOBB_Drawer					*oobb_drawer = NULL;
 	Culling_Type culling_type = Culling_Type::None;
+
+	bool active = true;
 		
-		void SetMesh(CMesh *pMesh);
+	void SetMesh(CMesh* pMesh);
 	void SetShader(CShader *pShader);
 	void SetShader(int nMaterial, CShader *pShader);
 	void SetMaterial(int nMaterial, CMaterial *pMaterial);
@@ -248,12 +254,21 @@ public:
 	void MoveStrafe(float fDistance = 1.0f);
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
+	void Move(XMFLOAT3& vDirection, float fSpeed);
 
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
 
 	void SetLookAt(XMFLOAT3& xmf3Target, XMFLOAT3& xmf3Up = XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+	void SetMovingDirection(XMFLOAT3& xmf3MovingDirection) { m_xmf3MovingDirection = Vector3::Normalize(xmf3MovingDirection); }
+	XMFLOAT3 GetMovingDirection() { return m_xmf3MovingDirection; }
+
+	void SetMovingSpeed(float fSpeed) { m_fMovingSpeed = fSpeed; }
+	float GetMovingSpeed() { return m_fMovingSpeed; }
+
+	void SetMovingRange(float fRange) { m_fMovingRange = fRange; }
 
 	CGameObject *GetParent() { return(m_pParent); }
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent=NULL);
@@ -410,7 +425,9 @@ struct Asteroid_INSTANCE
 #define Overlaped_Box_N 3
 class Asteroid : public CRotatingObject
 {
-protected:
+
+public:
+	float move_time = 0.0f;
 
 public:
 	Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
@@ -429,4 +446,16 @@ public:
 	Billboard_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	~Billboard_Object();
 	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
+};
+
+class Billboard_Animation_Object : public Billboard_Object
+{
+public:
+	UINT sprite_index = 0;
+
+	Billboard_Animation_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	~Billboard_Animation_Object();
+	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
 };

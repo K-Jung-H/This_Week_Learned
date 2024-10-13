@@ -71,6 +71,7 @@ public:
 	virtual void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet, UINT nInstances);
+
 	virtual  int CheckRayIntersection(XMFLOAT3& xmf3RayOrigin, XMFLOAT3& xmf3RayDirection, float* pfNearHitDistance);
 	BoundingOrientedBox* GetBoundingBox() { return mesh_bounding_box; }
 
@@ -155,8 +156,18 @@ public:
 class Billboard_Mesh : public CTexturedMesh
 {
 public:
+	UINT* AnimationVertexinfo = NULL;
+
+	ID3D12Resource* m_pd3dAnimationVertexinfoBuffer = NULL;
+	ID3D12Resource* m_pd3dAnimationVertexinfoUploadBuffer = NULL;
+	D3D12_VERTEX_BUFFER_VIEW		m_d3dAnimationVertexinfoBufferView;
+
+
 	Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f);
 	virtual ~Billboard_Mesh();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, bool animation = false);
+
 };
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -416,11 +416,18 @@ void CGameFramework::BuildObjects()
 
 	game_scene = new Game_Scene();
 	if (game_scene)
+	{
 		game_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
+		
+	}
 
 	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature());
 	game_player->SetPosition(XMFLOAT3(0.0f, 100.0f, 0.0f));
+
+	if (game_scene->enemy_shader != NULL)
+		game_scene->enemy_shader->Set_Target(game_player);
+
 
 	start_scene->m_pPlayer = m_pPlayer = game_player;
 	game_scene->m_pPlayer = game_player;
