@@ -44,6 +44,8 @@ public:
 
 	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj);
+	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox);
+
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 };
@@ -416,22 +418,44 @@ public:
 
 };
 
-struct Asteroid_INSTANCE
+struct CB_Outline_INFO
 {
-	XMFLOAT4X4 m_xmf4x4Transform;
-	XMFLOAT4 m_xmcColor;
+	XMFLOAT3 outline_color;
+	float thickness;
 };
 
 #define Overlaped_Box_N 3
 class Asteroid : public CRotatingObject
 {
+protected:
+	ID3D12Resource* m_pd3dcb_outline_Info = NULL;
+	CB_Outline_INFO* m_pcbMapped_outline_Info = NULL;
 
+public:
+	float life = 100.0f;
+	float move_time = 0.0f;
+	XMFLOAT3 outline_color = { 1.0f, 0.0f, 0.0f };
+public:
+	Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~Asteroid();
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+};
+
+class Bullet_Object : public CRotatingObject
+{
 public:
 	float move_time = 0.0f;
 
 public:
-	Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	virtual ~Asteroid();
+	Bullet_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~Bullet_Object();
 
 	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);

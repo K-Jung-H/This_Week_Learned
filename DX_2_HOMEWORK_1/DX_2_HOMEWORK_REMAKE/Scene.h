@@ -85,16 +85,16 @@ public:
 
 	virtual bool ProcessInput(UCHAR *pKeysBuffer);
 
-    virtual void AnimateObjects(float fTimeElapsed);
+	virtual void AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fDeltaTime);
 	virtual void Scene_Update();
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
 	virtual void ReleaseUploadBuffers();
-
+	CHeightMapTerrain* GetTerrain() { return(m_pTerrain); }
 	CPlayer								*m_pPlayer = NULL;
-
+	float m_fElapsedTime = 0.0f;
 public:
 	ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
 
@@ -152,7 +152,7 @@ public:
 	virtual ID3D12RootSignature* GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	virtual bool ProcessInput(UCHAR* pKeysBuffer);
-	virtual void AnimateObjects(float fDeltaTime);
+	virtual void AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fDeltaTime);
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
@@ -170,6 +170,7 @@ class BOX_Shader;
 class Asteroid_Shader;
 class Black_Hole_Shader;
 class Sprite_Billboard_Shader;
+class Diffuse_Shader;
 
 class Game_Scene : public CScene
 {
@@ -191,6 +192,7 @@ public:
 	Asteroid_Shader* enemy_shader = NULL;
 	Black_Hole_Shader* black_hole_shader = NULL;
 	Sprite_Billboard_Shader* effect_shader = NULL;
+	Diffuse_Shader* bullet_shader = NULL;
 
 	Game_Scene();
 	~Game_Scene();
@@ -209,8 +211,8 @@ public:
 	virtual ID3D12RootSignature* GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	virtual bool ProcessInput(UCHAR* pKeysBuffer);
-	virtual void AnimateObjects(float fDeltaTime);
-	virtual void Scene_Update();
+	virtual void AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fDeltaTime);
+	virtual void Scene_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
@@ -220,5 +222,5 @@ public:
 	void Add_Boom_Effect(XMFLOAT3 exlposion_pos);
 
 	void Collision_Defender(CPlayer* player_ptr, CObjectsShader* pshader);
-	void Check_Collision_Enemy_to_Box();
+	void Check_Enemy_Collision();
 };

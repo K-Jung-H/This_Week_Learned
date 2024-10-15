@@ -286,7 +286,6 @@ void CGameFramework::ChangeSwapChainState()
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (rendering_scene) rendering_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
 		case WM_LBUTTONDOWN:
@@ -307,7 +306,6 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (rendering_scene) rendering_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
 		case WM_KEYUP:
@@ -419,10 +417,9 @@ void CGameFramework::BuildObjects()
 	{
 		game_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
-		
 	}
 
-	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature());
+	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature(), game_scene->GetTerrain());
 	game_player->SetPosition(XMFLOAT3(0.0f, 100.0f, 0.0f));
 
 	if (game_scene->enemy_shader != NULL)
@@ -498,12 +495,19 @@ void CGameFramework::ProcessInput()
 	if (!bProcessedByScene)
 	{
 		DWORD dwDirection = 0;
-		if (pKeysBuffer[VK_UP] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeysBuffer[VK_DOWN] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeysBuffer[VK_LEFT] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeysBuffer[VK_RIGHT] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
+		// 방향키와 W, A, S, D 키를 동시에 처리
+		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
+			dwDirection |= DIR_FORWARD;   // 방향키 위 또는 W
+		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
+			dwDirection |= DIR_BACKWARD;  // 방향키 아래 또는 S
+		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
+			dwDirection |= DIR_LEFT;      // 방향키 왼쪽 또는 A
+		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
+			dwDirection |= DIR_RIGHT;     // 방향키 오른쪽 또는 D
+		if (pKeysBuffer[VK_PRIOR] & 0xF0)
+			dwDirection |= DIR_UP;        // Page Up
+		if (pKeysBuffer[VK_NEXT] & 0xF0)
+			dwDirection |= DIR_DOWN;      // Page Down
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -535,8 +539,8 @@ void CGameFramework::AnimateObjects()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	if (rendering_scene) 
-		rendering_scene->AnimateObjects(fTimeElapsed);
+	if (rendering_scene)
+		rendering_scene->AnimateObjects(m_pd3dDevice, m_pd3dCommandList, fTimeElapsed);
 
 	m_pPlayer->Animate(fTimeElapsed, NULL);
 }

@@ -160,7 +160,8 @@ void CPlayer::Update(float fTimeElapsed)
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 	Move(xmf3Velocity, false);
 
-	if (m_pPlayerUpdatedContext) OnPlayerUpdateCallback(fTimeElapsed);
+	if (m_pPlayerUpdatedContext) 
+		OnPlayerUpdateCallback(fTimeElapsed);
 
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
 	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
@@ -172,6 +173,44 @@ void CPlayer::Update(float fTimeElapsed)
 	float fDeceleration = (m_fFriction * fTimeElapsed);
 	if (fDeceleration > fLength) fDeceleration = fLength;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+}
+
+void CPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
+{
+	XMFLOAT3 xmf3PlayerPosition = GetPosition();
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
+	/*지형에서 플레이어의 현재 위치 (x, z)의 지형 높이(y)를 구한다. 그리고 플레이어 메쉬의 높이가 12이고 플레이어의
+	중심이 직육면체의 가운데이므로 y 값에 메쉬의 높이의 절반을 더하면 플레이어의 위치가 된다.*/
+	float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) +6.0f;
+
+	if (xmf3PlayerPosition.y < fHeight)
+	{
+		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+		xmf3PlayerVelocity.y = 0.0f;
+		SetVelocity(xmf3PlayerVelocity);
+		xmf3PlayerPosition.y = fHeight;
+		SetPosition(xmf3PlayerPosition);
+	}
+}
+
+void CPlayer::OnCameraUpdateCallback(float fTimeElapsed)
+{
+	XMFLOAT3 xmf3CameraPosition = m_pCamera->GetPosition();
+
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pCameraUpdatedContext;
+	float fHeight = pTerrain->GetHeight(xmf3CameraPosition.x, xmf3CameraPosition.z) +
+		5.0f;
+	if (xmf3CameraPosition.y <= fHeight)
+	{
+		xmf3CameraPosition.y = fHeight;
+		m_pCamera->SetPosition(xmf3CameraPosition);
+		if (m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
+		{
+			//3인칭 카메라의 경우 카메라 위치(y-좌표)가 변경되었으므로 카메라가 플레이어를 바라보도록 한다.
+			CThirdPersonCamera* p3rdPersonCamera = (CThirdPersonCamera*)m_pCamera;
+			p3rdPersonCamera->SetLookAt(GetPosition());
+		}
+	}
 }
 
 CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
@@ -228,35 +267,83 @@ void CPlayer::OnPrepareRender()
 	UpdateTransform(NULL);
 }
 
-void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
 	if (nCameraMode == THIRD_PERSON_CAMERA)
 	{
-		if (m_pShader) 
+		if (m_pShader)
 			m_pShader->Render(pd3dCommandList, pCamera, 0);
 		CGameObject::Render(pd3dCommandList, pCamera);
 
 		if (CObjectsShader::Show_Collider)
-		{
 			if (m_player_bounding_box)
 			{
 				oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
 				oobb_drawer->UpdateOOBB_Data(pd3dCommandList, this);
 				oobb_drawer->Render(pd3dCommandList, pCamera);
 			}
-		}
-	}
 
+		if (CObjectsShader::Show_Attack_Collider)
+			if (m_player_Sight_bounding_box)
+			{
+				oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
+				oobb_drawer->UpdateOOBB_Data(pd3dCommandList, &m_xmf4x4World, Get_Light_Collider());
+				oobb_drawer->Render(pd3dCommandList, pCamera);
+			}
+
+	}
 }
+
 
 BoundingOrientedBox* CPlayer::GetCollider()
 {
 	// 기존 바운딩 박스를 가져옵니다.
 	BoundingOrientedBox* PlayerBoundingBox = new BoundingOrientedBox(*m_player_bounding_box);
+	XMFLOAT3 player_pos = GetPosition();
 
-	PlayerBoundingBox->Center = GetPosition();
-	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	// 월드 행렬에서 회전 성분 추출
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(worldMatrix);
+
+	// 바운딩 박스의 중심 좌표를 플레이어의 회전 값에 맞춰 회전
+	XMVECTOR boxCenter = XMLoadFloat3(&PlayerBoundingBox->Center);
+	XMVECTOR rotatedCenter = XMVector3Rotate(boxCenter, quaternionRotation);
+
+	// 플레이어 위치를 적용하여 월드 좌표계로 변환
+	XMVECTOR playerPosition = XMLoadFloat3(&player_pos);
+	XMVECTOR newPosition = XMVectorAdd(rotatedCenter, playerPosition);
+
+	// 변환된 중심 좌표를 다시 저장
+	XMStoreFloat3(&PlayerBoundingBox->Center, newPosition);
+
+	// 회전 정보를 바운딩 박스에 적용
+	XMStoreFloat4(&PlayerBoundingBox->Orientation, quaternionRotation);
+
+	return PlayerBoundingBox;
+}
+BoundingOrientedBox* CPlayer::Get_Light_Collider()
+{
+	// 기존 바운딩 박스를 가져옵니다.
+	BoundingOrientedBox* PlayerBoundingBox = new BoundingOrientedBox(*m_player_Sight_bounding_box);
+	XMFLOAT3 player_pos = GetPosition();
+
+	// 월드 행렬에서 회전 성분 추출
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(worldMatrix);
+
+	// 바운딩 박스의 중심 좌표를 플레이어의 회전 값에 맞춰 회전
+	XMVECTOR boxCenter = XMLoadFloat3(&PlayerBoundingBox->Center);
+	XMVECTOR rotatedCenter = XMVector3Rotate(boxCenter, quaternionRotation);
+
+	// 플레이어 위치를 적용하여 월드 좌표계로 변환
+	XMVECTOR playerPosition = XMLoadFloat3(&player_pos);
+	XMVECTOR newPosition = XMVectorAdd(rotatedCenter, playerPosition);
+
+	// 변환된 중심 좌표를 다시 저장
+	XMStoreFloat3(&PlayerBoundingBox->Center, newPosition);
+
+	// 회전 정보를 바운딩 박스에 적용
 	XMStoreFloat4(&PlayerBoundingBox->Orientation, quaternionRotation);
 
 	return PlayerBoundingBox;
@@ -265,7 +352,7 @@ BoundingOrientedBox* CPlayer::GetCollider()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CAirplanePlayer
 
-CAirplanePlayer::CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
+CAirplanePlayer::CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void* pContext)
 {
 	m_pCamera = ChangeCamera(SPACESHIP_CAMERA, 0.0f);
 
@@ -275,9 +362,17 @@ CAirplanePlayer::CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommand
 	CGameObject *pGameObject = CGameObject::LoadGeometryFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Mi24.bin", m_pShader);
 	SetChild(pGameObject);
 	
-	m_player_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(20.0f, 10.0f, 20.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	m_player_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(10.0f, 5.0f, 10.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	
+	float light_length = 50.0f;
+	m_player_Sight_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, light_length), XMFLOAT3(10.0f, 10.0f, light_length), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+
 	oobb_drawer = new OOBB_Drawer();
 	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)pContext;
+	SetPlayerUpdatedContext(pTerrain);
+	SetCameraUpdatedContext(pTerrain);
 
 	PrepareAnimate();
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);

@@ -288,3 +288,12 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
 };
 
+class CSphereMeshDiffused : public CStandardMesh
+{
+public:
+	CSphereMeshDiffused(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius = 2.0f, int nSlices = 20, int nStacks = 20);
+	virtual ~CSphereMeshDiffused();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
+
+};

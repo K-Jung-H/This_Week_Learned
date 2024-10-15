@@ -208,7 +208,7 @@ ID3D12RootSignature* CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevic
 		pd3dDescriptorRanges[4].RegisterSpace = 0;
 		pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
-	D3D12_ROOT_PARAMETER pd3dRootParameters[12];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[13];
 	{
 		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
@@ -268,13 +268,16 @@ ID3D12RootSignature* CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevic
 		pd3dRootParameters[10].Descriptor.RegisterSpace = 0;
 		pd3dRootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		//==================================================
-		pd3dRootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[11].Constants.Num32BitValues = 1;
-		pd3dRootParameters[11].Constants.ShaderRegister = 7;  // sprite_index
-		pd3dRootParameters[11].Constants.RegisterSpace = 0;
+		pd3dRootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[11].Constants.ShaderRegister = 7;  // outline_color
+		pd3dRootParameters[11].Constants.RegisterSpace = 0; 
 		pd3dRootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-
+		//==================================================
+		pd3dRootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[12].Constants.Num32BitValues = 1;
+		pd3dRootParameters[12].Constants.ShaderRegister = 8;  // sprite_index
+		pd3dRootParameters[12].Constants.RegisterSpace = 0;
+		pd3dRootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		//==================================================
 	}
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[3];
@@ -411,7 +414,7 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 	return(false);
 }
 
-void CScene::AnimateObjects(float fTimeElapsed)
+void CScene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Animate(fTimeElapsed, NULL);
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->UpdateTransform(NULL);
@@ -623,7 +626,7 @@ bool Start_Scene::ProcessInput(UCHAR* pKeysBuffer)
 	return(false);
 }
 
-void Start_Scene::AnimateObjects(float fTimeElapsed)
+void Start_Scene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) 
 		m_ppGameObjects[i]->Animate(fTimeElapsed, NULL);
@@ -745,7 +748,7 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	{
 		m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
-		float scale_value = 3.0f;
+		float scale_value = 5.0f;
 		float height_scale = 0.3f;
 
 		XMFLOAT3 xmf3Scale(scale_value, height_scale, scale_value);
@@ -757,7 +760,7 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 
 	//============================================================
-	m_nShaders = 4;
+	m_nShaders = 5;
 	m_ppShaders = new CShader * [m_nShaders];
 
 
@@ -794,7 +797,16 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	m_ppShaders[3] = pSprite_Billboard_Shader;
 
 	//============================================================
+		
+	Diffuse_Shader* diffuse_shader = new Diffuse_Shader();
+	diffuse_shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	diffuse_shader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL);
 
+	bullet_shader = diffuse_shader;
+	m_ppShaders[4] = diffuse_shader;
+
+	//============================================================
+	
 	OOBBShader* pOOBBShader = new OOBBShader();
 	pOOBBShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
@@ -803,8 +815,8 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	Asteroid_Shader* pAsteroidShader = new Asteroid_Shader();
 	pAsteroidShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-	pAsteroidShader->Set_Outline_Shader(outline_shader);
 	pAsteroidShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain);
+	pAsteroidShader->Set_Outline_Shader(outline_shader);
 
 
 	enemy_shader = pAsteroidShader;
@@ -961,9 +973,25 @@ bool Game_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case VK_TAB:
-			CObjectsShader::Show_Collider = true;
+		case '1':
+			CObjectsShader::Show_Collider = !CObjectsShader::Show_Collider;
+			if (CObjectsShader::Show_Collider)
+				CObjectsShader::Show_Attack_Collider = false;
 			break;
+
+		case '2':
+			CObjectsShader::Show_Attack_Collider = !CObjectsShader::Show_Attack_Collider;
+			if (CObjectsShader::Show_Attack_Collider)
+				CObjectsShader::Show_Collider = false;
+			break;
+
+		case VK_SPACE:
+		{
+			bullet_shader->m_ppObjects[0]->SetPosition(m_pPlayer->GetPosition());
+			bullet_shader->m_ppObjects[0]->SetMovingDirection(m_pPlayer->GetLookVector());
+			bullet_shader->m_ppObjects[0]->SetMovingSpeed(60.0f);
+		}
+
 		default:
 			break;
 		}
@@ -972,8 +1000,6 @@ bool Game_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 	case WM_KEYUP:
 		switch (wParam)
 		{
-		case VK_TAB:
-			break;
 		default:
 			break;
 		}
@@ -989,8 +1015,9 @@ bool Game_Scene::ProcessInput(UCHAR* pKeysBuffer)
 	return(false);
 }
 
-void Game_Scene::AnimateObjects(float fTimeElapsed)
+void Game_Scene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	m_fElapsedTime += fTimeElapsed;
 	if (m_pPlayer)
 	{
 		enemy_shader->Set_Target(m_pPlayer);
@@ -1020,13 +1047,19 @@ void Game_Scene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
-	Scene_Update();
+	Scene_Update(pd3dDevice, pd3dCommandList);
 }
 
-void Game_Scene::Scene_Update()
+void Game_Scene::Scene_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	Collision_Defender(m_pPlayer, (CObjectsShader*)m_ppShaders[1]);
-	Check_Collision_Enemy_to_Box();
+	Collision_Defender(m_pPlayer, (CObjectsShader*)box_shader);
+	Check_Enemy_Collision();
+
+	if (m_fElapsedTime > 5.0f)
+	{
+		m_fElapsedTime = 0.0f;
+		enemy_shader->Add_Object(pd3dDevice, pd3dCommandList, XMFLOAT3(m_pTerrain->GetWidth() / 4, 100.0f, m_pTerrain->GetLength() / 4));
+	}
 }
 void Game_Scene::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
@@ -1055,7 +1088,7 @@ void Game_Scene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 	//======================================
 	for (CGameObject* obj_ptr : enemy_shader->m_ppObjects)
 	{
-		if (obj_ptr)
+		if (obj_ptr && obj_ptr->active)
 		{
 			obj_ptr->UpdateTransform(NULL);
 			obj_ptr->Render(pd3dCommandList, pCamera);
@@ -1162,9 +1195,10 @@ void Game_Scene::Collision_Defender(CPlayer* player_ptr, CObjectsShader* object_
 	 }
 }
 
-void Game_Scene::Check_Collision_Enemy_to_Box()
+void Game_Scene::Check_Enemy_Collision()
 {
-	
+	BoundingOrientedBox* player_light_obb = m_pPlayer->Get_Light_Collider();
+
 	for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects)
 	{
 		if (asteroid_ptr->active == false)
@@ -1182,6 +1216,17 @@ void Game_Scene::Check_Collision_Enemy_to_Box()
 				break;
 			}
 		}
+
+		if (asteroid_obb->Intersects(*player_light_obb))
+		{
+			if (((Asteroid*)asteroid_ptr)->life > 0)
+				((Asteroid*)asteroid_ptr)->life -= 1;
+			else
+			{
+				asteroid_ptr->active = false;
+				Add_Boom_Effect(asteroid_ptr->GetPosition());
+			}
+		}
 	}
 }
 
@@ -1195,6 +1240,7 @@ void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos)
 		if (boom_billboard_obj->active == false)
 		{
 			boom_billboard_obj->active = true;
+			((Billboard_Animation_Object*)boom_billboard_obj)->sprite_index = 0;
 			boom_billboard_obj->SetPosition(exlposion_pos);
 			Done = true;
 			break;

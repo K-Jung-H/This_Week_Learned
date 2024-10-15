@@ -390,17 +390,21 @@ float4 PS_Instancing_Asteroid(VS_INSTANCING_OUTPUT input) : SV_TARGET
     return (cColor);
 }
 
+cbuffer Outline_Color_Buffer : register(b7)
+{
+    float3 outline_color;
+    float thickness;
+}
+
 // 윤곽선 정점 셰이더
 VS_INSTANCING_OUTPUT VSOutline(VS_INSTANCING_INPUT input, uint nInstanceID : SV_InstanceID)
 {
     VS_INSTANCING_OUTPUT output;
     
-    float OutlineThickness = 1.0f;
-    
     float4x4 rotationMatrix = GetRotationMatrix(nInstanceID);
     float4x4 finalTransform = mul(rotationMatrix, gmtxGameObject);
     
-    float4 expandedPosition = float4(input.position + input.normal * OutlineThickness, 1.0f);
+    float4 expandedPosition = float4(input.position + input.normal * thickness, 1.0f);
     
     // 확장된 위치를 변환
     output.position = mul(mul(mul(expandedPosition, finalTransform), gmtxView), gmtxProjection);
@@ -412,7 +416,7 @@ VS_INSTANCING_OUTPUT VSOutline(VS_INSTANCING_INPUT input, uint nInstanceID : SV_
 float4 PSOutline(VS_INSTANCING_OUTPUT input) : SV_TARGET
 {
     // 윤곽선 색상 설정
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+    return float4(outline_color, 1.0f);
 }
 
 //=======================================================================
@@ -510,7 +514,7 @@ float4 PSBillboard_Black_Hole(VS_TEXTURED_OUTPUT input) : SV_TARGET
 
 
 
-cbuffer Sprite_Index_Buffer : register(b7)
+cbuffer Sprite_Index_Buffer : register(b8)
 {
     uint sprite_index;
 }
@@ -595,4 +599,32 @@ float4 PS_Billboard_Animation(VS_SPRITE_BILLBOARD_OUTPUT input) : SV_TARGET
     float4 cColor = Default_Texture.Sample(gssWrap, uv);
     
     return cColor; // 샘플링된 색상을 반환
+}
+
+//============================================
+
+struct VS_INPUT
+{
+    float3 position : POSITION;
+    float3 color : COLOR;
+};
+
+struct VS_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
+};
+
+VS_OUTPUT VSDiffused(VS_INPUT input)
+{
+    VS_OUTPUT output;
+    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    output.color = float4(input.color, 1.0f);
+    return (output);
+}
+
+//픽셀 셰이더를 정의한다. 
+float4 PSDiffused(VS_OUTPUT input) : SV_TARGET
+{
+    return (input.color);
 }

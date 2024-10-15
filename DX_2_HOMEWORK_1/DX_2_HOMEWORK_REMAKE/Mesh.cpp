@@ -1275,7 +1275,8 @@ float CHeightMapImage::GetHeight(float fx, float fz, bool bReverseQuad)
 	return(fHeight);
 }
 
-CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void* pContext) : CStandardMesh(pd3dDevice, pd3dCommandList)
+CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void* pContext)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
 {
 	m_nVertices = nWidth * nLength;
 	m_nOffset = 0;
@@ -1350,8 +1351,6 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	}
 
 
-
-	// CalculateVertexNormals(m_pxmf3Normals, m_pxmf3Positions, m_nVertices, m_ppnSubSetIndices[0], nSubMeshIndices);
 
 
 	// 서브메쉬 인덱스 버퍼 및 업로드 버퍼 생성
@@ -1447,6 +1446,149 @@ void CHeightMapGridMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int 
 
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[5] = { m_d3dPositionBufferView, m_d3dNormalBufferView, m_d3dTextureCoord0BufferView, m_d3dTextureCoord1BufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
+
+	if ((m_nSubMeshes > 0) && (nSubSet < m_nSubMeshes))
+	{
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[nSubSet], 1, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
+	}
+}
+
+CSphereMeshDiffused::CSphereMeshDiffused(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
+{
+	XMFLOAT3 color1 = { 0.5f,0.5f,0.8f };
+	XMFLOAT3 color2 = { 0.0f,0.0f,0.5f };
+
+
+	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	m_nVertices = 2 + (nSlices * (nStacks - 1));
+
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+	m_pxmf3Normals = new XMFLOAT3[m_nVertices];
+
+
+	float fDeltaPhi = float(XM_PI / nStacks);
+	float fDeltaTheta = float((2.0f * XM_PI) / nSlices);
+	int k = 0;
+
+	//구의 위(북극)를 나타내는 정점이다. 
+	m_pxmf3Positions[k++] = XMFLOAT3(0.0f, +fRadius, 0.0f);
+
+	float theta_i, phi_j;
+	//원기둥 표면의 정점이다. 
+	for (int j = 1; j < nStacks; j++)
+	{
+		phi_j = fDeltaPhi * j;
+		for (int i = 0; i < nSlices; i++)
+		{
+			theta_i = fDeltaTheta * i;
+			m_pxmf3Positions[k++] = XMFLOAT3(
+				fRadius * sinf(phi_j) * cosf(theta_i),
+				fRadius * cosf(phi_j), 
+				fRadius * sinf(phi_j) * sinf(theta_i));
+		}
+	}
+	//구의 아래(남극)를 나타내는 정점이다. 
+	m_pxmf3Positions[k] = XMFLOAT3(0.0f, -fRadius, 0.0f);
+
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		m_pxmf3Normals[i] = XMFLOAT3(rand() % 2 == 0 ? color1 : color2);
+	}
+
+	// 서브메쉬의 개수는 1개만 사용하도록 설정
+	m_nSubMeshes = 1;
+
+	// 서브메쉬 인덱스 개수 및 할당
+	int nSubMeshIndices = (nSlices * 3) * 2 + (nSlices * (nStacks - 2) * 3 * 2);	 // 단일 서브메쉬의 인덱스 개수
+	m_pnSubSetIndices = new int[m_nSubMeshes];									 // 서브메쉬 인덱스 개수 저장 배열
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];							 // 서브메쉬 인덱스 배열 포인터
+
+	m_pnSubSetIndices[0] = nSubMeshIndices; // 첫 번째 서브메쉬의 인덱스 개수 설정
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // 첫 번째 서브메쉬의 인덱스 배열 할당
+
+
+	k = 0;
+	//구의 위쪽 원뿔의 표면을 표현하는 삼각형들의 인덱스이다. 
+	for (int i = 0; i < nSlices; i++)
+	{
+		m_ppnSubSetIndices[0][k++] = 0;
+		m_ppnSubSetIndices[0][k++] = 1 + ((i + 1) % nSlices);
+		m_ppnSubSetIndices[0][k++] = 1 + i;
+	}
+	//구의 원기둥의 표면을 표현하는 삼각형들의 인덱스이다. 
+	for (int j = 0; j < nStacks - 2; j++)
+	{
+		for (int i = 0; i < nSlices; i++)
+		{
+			//사각형의 첫 번째 삼각형의 인덱스이다. 
+			m_ppnSubSetIndices[0][k++] = 1 + (i + (j * nSlices));
+			m_ppnSubSetIndices[0][k++] = 1 + (((i + 1) % nSlices) + (j * nSlices));
+			m_ppnSubSetIndices[0][k++] = 1 + (i + ((j + 1) * nSlices));
+			//사각형의 두 번째 삼각형의 인덱스이다. 
+			m_ppnSubSetIndices[0][k++] = 1 + (i + ((j + 1) * nSlices));
+			m_ppnSubSetIndices[0][k++] = 1 + (((i + 1) % nSlices) + (j * nSlices));
+			m_ppnSubSetIndices[0][k++] = 1 + (((i + 1) % nSlices) + ((j + 1) * nSlices));
+		}
+	}
+	//구의 아래쪽 원뿔의 표면을 표현하는 삼각형들의 인덱스이다. 
+	for (int i = 0; i < nSlices; i++)
+	{
+		m_ppnSubSetIndices[0][k++] = (m_nVertices - 1);
+		m_ppnSubSetIndices[0][k++] = ((m_nVertices - 1) - nSlices) + i;
+		m_ppnSubSetIndices[0][k++] = ((m_nVertices - 1) - nSlices) + ((i + 1) % nSlices);
+	}
+	
+	// 서브메쉬 인덱스 버퍼 및 업로드 버퍼 생성
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+
+	// 첫 번째 서브메쉬의 인덱스 버퍼 생성
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
+		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		&m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	// 서브메쉬 인덱스 버퍼 뷰 설정
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
+
+	//===========================================================
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	//===========================================================
+	m_pd3dNormalBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
+
+	m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
+	m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+
+	mesh_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(fRadius, fRadius, fRadius), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+CSphereMeshDiffused::~CSphereMeshDiffused()
+{
+}
+
+void CSphereMeshDiffused::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[2] = { m_d3dPositionBufferView, m_d3dNormalBufferView};
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews);
 
 	if ((m_nSubMeshes > 0) && (nSubSet < m_nSubMeshes))
 	{

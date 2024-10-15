@@ -224,6 +224,7 @@ public:
 	std::vector<CGameObject*>m_ppObjects;
 
 	static bool Show_Collider;
+	static bool Show_Attack_Collider;
 };
 
 
@@ -245,6 +246,25 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+class Diffuse_Shader : public CObjectsShader
+{
+public:
+	Diffuse_Shader();
+	virtual ~Diffuse_Shader();
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
+
+public:
+
+};
 
 class BOX_Shader : public CObjectsShader
 {
@@ -268,9 +288,11 @@ public:
 class Asteroid_Shader : public CObjectsShader
 {
 private:
+	CHeightMapTerrain* pTerrain_info = NULL;
 	CGameObject* target_obj = NULL;
-	Outline_Shader* outline_shader = NULL;
-
+	CMaterial* pAsteroidMaterial = NULL;
+	CMaterial* outline_Material = NULL;
+	CMesh* asteroid_mesh = NULL;
 public:
 	Asteroid_Shader();
 	virtual ~Asteroid_Shader();
@@ -280,7 +302,7 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
 
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	void Set_Outline_Shader(Outline_Shader* pshader) { outline_shader = pshader; };
+	void Set_Outline_Shader(Outline_Shader* pshader) { outline_Material->SetShader(pshader); };
 
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
 
@@ -288,6 +310,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
 
 	void Set_Target(CGameObject* obj_ptr) { target_obj = obj_ptr; };
+	void Add_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos);
 };
 
 class CBillboardObjectsShader : public CObjectsShader

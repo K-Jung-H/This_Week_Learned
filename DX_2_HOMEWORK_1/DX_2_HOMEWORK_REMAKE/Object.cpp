@@ -1013,7 +1013,7 @@ bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CG
 	XMVECTOR extents = XMLoadFloat3(&pBoundingBox->Extents);
 
 	// 게임 오브젝트의 위치와 회전값을 로드
-	XMVECTOR center = XMLoadFloat3(&g_obj->GetPosition());
+	XMVECTOR center = XMLoadFloat3(&pBoundingBox->Center);
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
 
 	// 월드 행렬에서 회전 행렬 추출
@@ -1038,6 +1038,49 @@ bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CG
 
 	// 상수 버퍼에 적용할 데이터를 설정
 	m_pcbMappedOOBBInfo->line_color = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);  // OBB의 색상
+	m_pcbMappedOOBBInfo->world_matrix = xmf4x4World;  // 계산된 월드 행렬
+
+	// GPU 상수 버퍼에 적용
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbOOBBInfo->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_OOBB_CUBE_CBV, d3dGpuVirtualAddress);
+
+	return true;
+}
+bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox)
+{
+	// 게임 오브젝트에서 BoundingOrientedBox를 가져오고, NULL 체크
+	if (pBoundingBox == NULL)
+		return false;
+
+	// BoundingOrientedBox의 Extents 값을 가져옵니다 (필요한 값만 사용)
+	XMVECTOR extents = XMLoadFloat3(&pBoundingBox->Extents);
+
+	// 게임 오브젝트의 위치와 회전값을 로드
+	XMVECTOR center = XMLoadFloat3(&pBoundingBox->Center);
+	XMMATRIX worldMatrix = XMLoadFloat4x4(matrix);
+
+	// 월드 행렬에서 회전 행렬 추출
+	XMVECTOR scale, rotation, translation;
+	XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix);
+
+	// 회전 행렬을 기준으로 BoundingOrientedBox에 적용할 변환 행렬을 구성
+	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
+	XMMATRIX scaleMatrix = XMMatrixScaling(
+		2.0f * XMVectorGetX(extents),
+		2.0f * XMVectorGetY(extents),
+		2.0f * XMVectorGetZ(extents));
+
+	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(center);
+
+	// 최종 월드 행렬 계산 (스케일, 회전, 이동 순서로 적용)
+	XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+
+	// 행렬을 XMFLOAT4X4 형식으로 저장 (HLSL에서 사용하는 행렬은 행 우선(row-major) 형태이므로 전치 필요)
+	XMFLOAT4X4 xmf4x4World;
+	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(finalWorldMatrix));
+
+	// 상수 버퍼에 적용할 데이터를 설정
+	m_pcbMappedOOBBInfo->line_color = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);  // OBB의 색상
 	m_pcbMappedOOBBInfo->world_matrix = xmf4x4World;  // 계산된 월드 행렬
 
 	// GPU 상수 버퍼에 적용
@@ -1362,11 +1405,13 @@ void Flying_Box::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 {
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
-
+//=======================================================
 Asteroid::Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) 
 	: CRotatingObject(2)
 {
 	PrepareAnimate();
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 	oobb_drawer = new OOBB_Drawer();
 	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	culling_type = Culling_Type::Need_Culling;
@@ -1374,6 +1419,30 @@ Asteroid::Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComm
 }
 Asteroid::~Asteroid()
 {
+}
+
+void Asteroid::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(CB_Outline_INFO) + 255) & ~255); //256의 배수
+	m_pd3dcb_outline_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	m_pd3dcb_outline_Info->Map(0, NULL, (void**)&m_pcbMapped_outline_Info);
+}
+
+void Asteroid::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	m_pcbMapped_outline_Info->outline_color = outline_color;
+	m_pcbMapped_outline_Info->thickness = 1.0f;
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcb_outline_Info->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(11, d3dGpuVirtualAddress);
+}
+
+void Asteroid::ReleaseShaderVariables()
+{
+	if (m_pd3dcb_outline_Info)
+	{
+		m_pd3dcb_outline_Info->Unmap(0, NULL);
+		m_pd3dcb_outline_Info->Release();
+	}
 }
 
 void Asteroid::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
@@ -1399,8 +1468,12 @@ void Asteroid::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCame
 		if (!IsVisible(pCamera))
 			return;
 
-	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	float red = (life)/100.0f;
+	float green = (100.0f - life) / 100;
+	outline_color = { red , green, 0 };
 
+	UpdateShaderVariables(pd3dCommandList);
+	CGameObject::UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
 	if (m_nMaterials > 0)
 	{
@@ -1419,6 +1492,36 @@ void Asteroid::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCame
 
 		}
 	}
+}
+
+//==================================================
+
+Bullet_Object::Bullet_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+	: CRotatingObject(1)
+{
+	PrepareAnimate();
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	oobb_drawer = new OOBB_Drawer();
+	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	culling_type = Culling_Type::Need_Culling;
+
+	SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	SetRotationSpeed(90.0f);
+	SetMovingSpeed(0.0f);
+}
+Bullet_Object::~Bullet_Object()
+{
+}
+
+void Bullet_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
+{
+	CRotatingObject::Animate(fTimeElapsed, pxmf4x4Parent);
+}
+
+void Bullet_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 //==================================================
@@ -1461,7 +1564,7 @@ void Billboard_Animation_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4
 
 void Billboard_Animation_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	pd3dCommandList->SetGraphicsRoot32BitConstants(11, 1, &sprite_index, 0); 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 1, &sprite_index, 0); 
 
 	OnPrepareRender();
 

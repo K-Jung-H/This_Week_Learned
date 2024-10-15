@@ -1020,6 +1020,7 @@ CRawFormatImage* CObjectsShader::Object_map = NULL;
 
 
 bool CObjectsShader::Show_Collider = false;
+bool CObjectsShader::Show_Attack_Collider = false;
 
 CObjectsShader::CObjectsShader()
 {
@@ -1067,7 +1068,7 @@ void CObjectsShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 
 	for(CGameObject* obj_ptr : m_ppObjects)
 	{
-		if (obj_ptr)
+		if (obj_ptr && obj_ptr->active)
 		{
 			obj_ptr->UpdateTransform(NULL);
 			obj_ptr->Render(pd3dCommandList, pCamera);
@@ -1077,7 +1078,10 @@ void CObjectsShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 	if (Show_Collider)
 	{
 		for (CGameObject* obj_ptr : m_ppObjects)
-			obj_ptr->Collider_Render(pd3dCommandList, pCamera);
+		{
+			if (obj_ptr && obj_ptr->active)
+				obj_ptr->Collider_Render(pd3dCommandList, pCamera);
+		}
 	}
 }
 
@@ -1133,6 +1137,69 @@ void CPlayerShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommand
 }
 
 //=========================================================
+Diffuse_Shader::Diffuse_Shader()
+{
+
+}
+
+Diffuse_Shader::~Diffuse_Shader()
+{
+}
+
+
+D3D12_INPUT_LAYOUT_DESC Diffuse_Shader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 2;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE Diffuse_Shader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSDiffused", "vs_5_1", &m_pd3dVertexShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Diffuse_Shader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSDiffused", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+void Diffuse_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CShader::CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+}
+
+void Diffuse_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+{
+	CGameObject* bullet = new Bullet_Object(pd3dDevice, pd3dCommandList, NULL);
+	CMesh* pSphereMesh = new CSphereMeshDiffused(pd3dDevice, pd3dCommandList, 2.0f, 30, 30);
+	CMaterial* bullet_material = new CMaterial();
+	bullet->SetMesh(pSphereMesh);
+	bullet->SetMaterial(0, bullet_material);
+	bullet->SetPosition(0.0f, 50.0f, 0.0f);
+	m_ppObjects.push_back(bullet);
+}
+
+void Diffuse_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
+{
+	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
+	CObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
+
+}
+
+//===============================================================
+
 
 BOX_Shader::BOX_Shader()
 {
@@ -1192,16 +1259,45 @@ void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	CMaterial* pCubeMaterial = new CMaterial();
 	pCubeMaterial->SetTexture(cube_texture);
-	
+
 	//===========================================
 	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)pContext;
-
-	int nTerrainWidth = int(pTerrain->GetWidth());
-	int nTerrainLength = int(pTerrain->GetLength());
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 
+	float wall_size= pTerrain->GetWidth();
+
+	//===========================================
+	Flying_Box* wall_box_object = NULL;
+	CMesh* wall_box_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, wall_size, wall_size, 10.0f);
+
+	XMFLOAT3 wall_pos_list[4] =
+	{ 
+		XMFLOAT3{0,				wall_size/2,		wall_size/2},
+		XMFLOAT3{wall_size,		wall_size / 2,	wall_size/2},
+		XMFLOAT3{wall_size/2,	wall_size / 2	,	wall_size},
+		XMFLOAT3{wall_size/2,	wall_size / 2 ,	0			}
+	};
+
+	for (int i = 0; i < 4; ++i)
+	{
+		wall_box_object = new Flying_Box(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		wall_box_object->SetMesh(wall_box_mesh);
+		wall_box_object->SetMaterial(0, pCubeMaterial);
+		wall_box_object->SetPosition(wall_pos_list[i]);
+		wall_box_object->SetRotationSpeed(0.0f);
+		if (i < 2)
+			wall_box_object->Rotate(0.0f, 90.0f, 0.0f);
+
+		m_ppObjects.push_back(wall_box_object);
+	}
+
+
+
+	//===========================================
+
+
 	Flying_Box* box_object = NULL;
-	int a = 0;
+
 	for (int nObjects = 0, z = 2; z <= 254; z+=20)
 	{
 		for (int x = 2; x <= 254; x+=20)
@@ -1256,7 +1352,6 @@ void BOX_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 
 //===============================================================
 
-
 Asteroid_Shader::Asteroid_Shader()
 {
 }
@@ -1301,83 +1396,24 @@ void Asteroid_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 void Asteroid_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	CGameObject* asteroid_ptr = new Asteroid(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	CMesh* asteroid_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 20.0f);
+	pTerrain_info = (CHeightMapTerrain*)pContext;
 
-	CMaterial* outline_Material = new CMaterial();
-	outline_Material->SetShader(outline_shader);
-	asteroid_ptr->SetMaterial(0, outline_Material);
 
+	asteroid_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 20.0f);
 
 	CTexture* asteroid_texture = new CTexture(2, RESOURCE_TEXTURE2D, 0, 1);
 	asteroid_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Lava_Emissive.dds", RESOURCE_TEXTURE2D, 0);
 	asteroid_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Lava_Normal.dds", RESOURCE_TEXTURE2D, 1);
 	CScene::CreateShaderResourceViews(pd3dDevice, asteroid_texture, 0, 9);
 
-	CMaterial* pAsteroidMaterial = new CMaterial();
+	pAsteroidMaterial = new CMaterial();
 	pAsteroidMaterial->SetTexture(asteroid_texture);
 	pAsteroidMaterial->SetShader(this);
-	asteroid_ptr->SetMaterial(1, pAsteroidMaterial);
 
-	asteroid_ptr->SetMesh(asteroid_mesh);
-	asteroid_ptr->SetPosition(0.0f, 50.0f, 0.0f);
-
-
-	m_ppObjects.push_back(asteroid_ptr);
+	outline_Material = new CMaterial();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	{
-		/*
-		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)pContext;
-
-	int nTerrainWidth = int(pTerrain->GetWidth());
-	int nTerrainLength = int(pTerrain->GetLength());
-	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
-	int a = 0;
-
-		for (int nObjects = 0, z = 2; z <= 254; z += 20)
-		{
-			for (int x = 2; x <= 254; x += 20)
-			{
-				BYTE nPixel = Object_map->GetRawImagePixel(x, z);
-
-				float fyOffset = 0.0f;
-
-				switch (nPixel)
-				{
-				case 102:
-					fyOffset = 30.0f * 0.5f;
-					break;
-
-				case 153:
-					fyOffset = 20.0f * 0.5f;
-					break;
-
-				case 204:
-					fyOffset = 40.0f * 0.5f;
-					break;
-
-				default:
-					break;
-				}
-
-				if (fyOffset)
-				{
-					float xPosition = x * xmf3Scale.x;
-					float zPosition = z * xmf3Scale.z;
-					float fHeight = pTerrain->GetHeight(xPosition, zPosition);
-
-					box_object = new Flying_Box(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-					box_object->SetMesh(cube_mesh);
-					box_object->SetMaterial(0, pCubeMaterial);
-					box_object->SetPosition(xPosition, fHeight + fyOffset, zPosition);
-					m_ppObjects[nObjects++] = box_object;
-					a = nObjects;
-				}
-			}
-		}*/
-	}
 }
 
 void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
@@ -1401,7 +1437,7 @@ void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
 		else
 			cool_down = 0.2f;
 
-		if (obj_info->move_time < 1.0f)
+		if (obj_info->move_time < cool_down)
 		{
 			obj_info->move_time += fTimeElapsed;
 			continue;
@@ -1452,6 +1488,20 @@ void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
 		}
 	}
 
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+
+		XMFLOAT3 pos = obj_ptr->GetPosition();
+		float fHeight = pTerrain_info->GetHeight(pos.x, pos.z) + 10.0f;
+
+		if (pos.y < fHeight)
+		{
+			pos.y = fHeight;
+			obj_ptr->SetPosition(pos);
+			((Asteroid*)obj_ptr)->move_time = 10.0f;
+		}
+	}
+
 
 	CObjectsShader::AnimateObjects(fTimeElapsed);
 }
@@ -1460,7 +1510,31 @@ void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
 void Asteroid_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
 {
 	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
-//	CObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
+}
+
+void Asteroid_Shader::Add_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos)
+{
+	// 기존 객체 리스트에 사용 안하는 객체가 있다면
+	for (CGameObject* obj_ptr : m_ppObjects)
+	{
+		if (obj_ptr->active == false)
+		{
+			obj_ptr->SetPosition(pos);
+			((Asteroid*)obj_ptr)->life = 100;
+			obj_ptr->active = true;
+			return;
+		}
+	}
+
+	// 모든 객체가 다 살아있어서 공간이 없다면
+	CGameObject* asteroid_ptr = new Asteroid(pd3dDevice, pd3dCommandList, NULL);
+
+	asteroid_ptr->SetMaterial(0, outline_Material);
+	asteroid_ptr->SetMaterial(1, pAsteroidMaterial);
+	asteroid_ptr->SetMesh(asteroid_mesh);
+	asteroid_ptr->SetPosition(pos);
+
+	m_ppObjects.push_back(asteroid_ptr);
 
 }
 
