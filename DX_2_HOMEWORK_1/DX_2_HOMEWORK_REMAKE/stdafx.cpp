@@ -11,6 +11,10 @@ UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 UINT gnCbvSrvDescriptorIncrementSize = 0;
 
+float PLAYER_SPEED_VALUE = 1.0f;
+float STONE_SPEED_VALUE = 1.0f;
+int DIFFICULTY_VALUE = 1;
+
 void DebugOutput(const std::string& message) {
 	std::wstring wMessage(message.begin(), message.end());
 	OutputDebugString((wMessage + L"\n").c_str());

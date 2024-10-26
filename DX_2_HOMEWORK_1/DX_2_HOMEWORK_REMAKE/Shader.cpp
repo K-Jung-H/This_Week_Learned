@@ -558,7 +558,11 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	{
 		const char* option_player_speed_txt = "option_player_speed";
 
-		option_player_speed_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, 0.6f), XMFLOAT2(0.4f, 0.3f), 1);
+		option_player_speed_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, 0.5f), XMFLOAT2(0.4f, 0.3f), 1);
+		option_player_speed_ptr->Is_Text_Screen = true;
+		option_player_speed_ptr->Text_List.push_back(_T("Slow"));
+		option_player_speed_ptr->Text_List.push_back(_T("Normal"));
+		option_player_speed_ptr->Text_List.push_back(_T("Fast"));
 
 		std::copy(option_player_speed_txt, option_player_speed_txt + std::strlen(option_player_speed_txt) + 1, option_player_speed_ptr->m_pstrFrameName);
 
@@ -567,7 +571,7 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_player_speed_minus_txt = "option_player_speed_minus";
 
-		option_player_speed_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, 0.6f), XMFLOAT2(-0.4f, 0.3f), 1);
+		option_player_speed_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, 0.5f), XMFLOAT2(-0.4f, 0.3f), 1);
 
 		std::copy(option_player_speed_minus_txt, option_player_speed_minus_txt + std::strlen(option_player_speed_minus_txt) + 1, option_player_speed_minus_button_ptr->m_pstrFrameName);
 
@@ -576,7 +580,7 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_player_speed_plus_txt = "option_player_speed_plus";
 
-		option_player_speed_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, 0.6f), XMFLOAT2(0.6f, 0.3f), 1);
+		option_player_speed_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, 0.5f), XMFLOAT2(0.6f, 0.3f), 1);
 
 		std::copy(option_player_speed_plus_txt, option_player_speed_plus_txt + std::strlen(option_player_speed_plus_txt) + 1, option_player_speed_plus_button_ptr->m_pstrFrameName);
 
@@ -586,7 +590,13 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_stone_speed_txt = "option_stone_speed";
 
-		option_stone_speed_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, 0.25f), XMFLOAT2(0.4f, -0.05f), 1);
+		option_stone_speed_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, 0.1f), XMFLOAT2(0.4f, -0.1f), 1);
+		option_stone_speed_ptr->Is_Text_Screen = true;
+		option_stone_speed_ptr->Text_List.push_back(_T("Very Slow"));
+		option_stone_speed_ptr->Text_List.push_back(_T("Slow"));
+		option_stone_speed_ptr->Text_List.push_back(_T("Normal"));
+		option_stone_speed_ptr->Text_List.push_back(_T("Fast"));
+		option_stone_speed_ptr->Text_List.push_back(_T("Very Fast"));
 
 		std::copy(option_stone_speed_txt, option_stone_speed_txt + std::strlen(option_stone_speed_txt) + 1, option_stone_speed_ptr->m_pstrFrameName);
 
@@ -595,7 +605,7 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_stone_speed_minus_txt = "option_stone_speed_minus";
 
-		option_stone_speed_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, 0.25f), XMFLOAT2(-0.4f, -0.05f), 1);
+		option_stone_speed_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, 0.1f), XMFLOAT2(-0.4f, -0.1f), 1);
 
 		std::copy(option_stone_speed_minus_txt, option_stone_speed_minus_txt + std::strlen(option_stone_speed_minus_txt) + 1, option_stone_speed_minus_button_ptr->m_pstrFrameName);
 
@@ -604,7 +614,7 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_stone_speed_plus_txt = "option_stone_speed_plus";
 
-		option_stone_speed_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, 0.25f), XMFLOAT2(0.6f, -0.05f), 1);
+		option_stone_speed_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, 0.1f), XMFLOAT2(0.6f, -0.1f), 1);
 
 		std::copy(option_stone_speed_plus_txt, option_stone_speed_plus_txt + std::strlen(option_stone_speed_plus_txt) + 1, option_stone_speed_plus_button_ptr->m_pstrFrameName);
 
@@ -614,7 +624,11 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_difficulty_txt = "option_difficulty";
 
-		option_difficulty_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, -0.1f), XMFLOAT2(0.4f, -0.4f), 1);
+		option_difficulty_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, text_box_texture, XMFLOAT2(-0.4f, -0.3f), XMFLOAT2(0.4f, -0.5f), 1);
+		option_difficulty_ptr->Is_Text_Screen = true;
+		option_difficulty_ptr->Text_List.push_back(_T("Easy"));
+		option_difficulty_ptr->Text_List.push_back(_T("Normal"));
+		option_difficulty_ptr->Text_List.push_back(_T("Hard"));
 
 		std::copy(option_difficulty_txt, option_difficulty_txt + std::strlen(option_difficulty_txt) + 1, option_difficulty_ptr->m_pstrFrameName);
 
@@ -623,7 +637,7 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_difficulty_minus_txt = "option_difficulty_minus";
 
-		option_difficulty_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, -0.1f), XMFLOAT2(-0.4f, -0.4f), 1);
+		option_difficulty_minus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, left_icon_texture, XMFLOAT2(-0.6f, -0.3f), XMFLOAT2(-0.4f, -0.5f), 1);
 
 		std::copy(option_difficulty_minus_txt, option_difficulty_minus_txt + std::strlen(option_difficulty_minus_txt) + 1, option_difficulty_minus_button_ptr->m_pstrFrameName);
 
@@ -632,7 +646,7 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* option_difficulty_plus_txt = "option_difficulty_plus";
 
-		option_difficulty_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, -0.1), XMFLOAT2(0.6f, -0.4f), 1);
+		option_difficulty_plus_button_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, right_icon_texture, XMFLOAT2(0.4f, -0.3f), XMFLOAT2(0.6f, -0.5f), 1);
 
 		std::copy(option_difficulty_plus_txt, option_difficulty_plus_txt + std::strlen(option_difficulty_plus_txt) + 1, option_difficulty_plus_button_ptr->m_pstrFrameName);
 
@@ -737,6 +751,7 @@ void ScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 		}
 	}
 }
+
 
 std::string ScreenShader::PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera)
 {
@@ -1021,7 +1036,7 @@ CRawFormatImage* CObjectsShader::Object_map = NULL;
 
 bool CObjectsShader::Show_Collider = false;
 bool CObjectsShader::Show_Attack_Collider = false;
-
+bool CObjectsShader::Show_ETC_Collider = false;
 CObjectsShader::CObjectsShader()
 {
 }
@@ -1068,7 +1083,7 @@ void CObjectsShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 
 	for(CGameObject* obj_ptr : m_ppObjects)
 	{
-		if (obj_ptr && obj_ptr->active)
+		if (obj_ptr && (obj_ptr->is_render && obj_ptr->active))
 		{
 			obj_ptr->UpdateTransform(NULL);
 			obj_ptr->Render(pd3dCommandList, pCamera);
@@ -1247,7 +1262,7 @@ void BOX_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	CMesh* cube_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, 40.0f, 40.0f, 10.0f);
+	CMesh* cube_mesh = new Textured_Cube_Mesh(pd3dDevice, pd3dCommandList, 40.0f, 40.0f, 40.0f);
 	CTexture* cube_texture = new CTexture(2, RESOURCE_TEXTURE2D, 0, 1);
 	cube_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/box_texture.dds", RESOURCE_TEXTURE2D, 0);
 	cube_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/box_texture_normal_2.dds", RESOURCE_TEXTURE2D, 1);
@@ -1285,6 +1300,7 @@ void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		wall_box_object->SetMaterial(0, pCubeMaterial);
 		wall_box_object->SetPosition(wall_pos_list[i]);
 		wall_box_object->SetRotationSpeed(0.0f);
+		wall_box_object->is_render = false; // 이거 활성화 하면  벽면 안보이게 됨
 		if (i < 2)
 			wall_box_object->Rotate(0.0f, 90.0f, 0.0f);
 
@@ -1328,7 +1344,7 @@ void BOX_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 			{
 				float xPosition = x * xmf3Scale.x;
 				float zPosition = z * xmf3Scale.z;
-				float fHeight = pTerrain->GetHeight(xPosition, zPosition);
+				float fHeight = pTerrain->GetHeight(xPosition, zPosition) * 5;
 
 				box_object = new Flying_Box(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 				box_object->SetMesh(cube_mesh);
@@ -1479,7 +1495,7 @@ void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
 		if (distance > 1.0f)
 		{
 			obj_ptr->SetMovingDirection(direction);
-			obj_ptr->SetMovingSpeed(distance);
+			obj_ptr->SetMovingSpeed(distance * STONE_SPEED_VALUE);
 		}
 		else
 		{
@@ -1699,7 +1715,9 @@ void Black_Hole_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 void Black_Hole_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	CGameObject* black_hole_ptr = new Billboard_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)pContext;
+	//========================================================
+	CGameObject* red_hole_ptr = new Black_Hole_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
 	CMesh* black_hole_mesh = new Billboard_Mesh(pd3dDevice, pd3dCommandList, 100.0f, 100.0f);
 	CTexture* black_hole_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
@@ -1710,11 +1728,24 @@ void Black_Hole_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CScene::CreateShaderResourceViews(pd3dDevice, black_hole_texture, 0, PARAMETER_DEFAULT_TEXTURE);
 
-	black_hole_ptr->SetMesh(black_hole_mesh);
-	black_hole_ptr->SetMaterial(0, pBlackHoleMaterial);
-	black_hole_ptr->SetPosition(300.0f, 100.0f, 300.0f);
+	red_hole_ptr->SetMesh(black_hole_mesh);
+	red_hole_ptr->SetMaterial(0, pBlackHoleMaterial);
+	red_hole_ptr->SetPosition(pTerrain->GetWidth() / 2, 100.0f, pTerrain->GetLength() / 2);
+	((Black_Hole_Object*)red_hole_ptr)->wave_info.Color_Change = XMFLOAT4(1.0f, 0.0f, 1.0f, 0.0f);
+	m_ppObjects.push_back(red_hole_ptr);
 
-	m_ppObjects.push_back(black_hole_ptr);
+	spawner_hole = (Black_Hole_Object*)red_hole_ptr;
+	//========================================================
+	CGameObject* blue_hole_ptr = new Black_Hole_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	blue_hole_ptr->SetMesh(black_hole_mesh);
+	blue_hole_ptr->SetMaterial(0, pBlackHoleMaterial);
+	blue_hole_ptr->SetPosition(300.0f, 200.0f, 300.0f);
+	blue_hole_ptr->active = false;
+
+	m_ppObjects.push_back(blue_hole_ptr);
+
+	player_black_hole = (Black_Hole_Object*)blue_hole_ptr;
+	//========================================================
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -1723,6 +1754,15 @@ void Black_Hole_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 void Black_Hole_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
 {
 	CBillboardObjectsShader::Render(pd3dCommandList, pCamera, nPipelineState);
+
+	if (CObjectsShader::Show_ETC_Collider)
+		if (player_black_hole->Gravity_area)
+		{
+			player_black_hole->oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
+			player_black_hole->Gravity_area->Center = player_black_hole->GetPosition();
+			player_black_hole->oobb_drawer->UpdateOOBB_Data(pd3dCommandList, &player_black_hole->m_xmf4x4World, player_black_hole->Gravity_area, XMFLOAT4(0.0f, 0.5f, 1.0f, 1.0f));
+			player_black_hole->oobb_drawer->Render(pd3dCommandList, pCamera);
+		}
 }
 
 

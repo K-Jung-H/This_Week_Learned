@@ -6,6 +6,8 @@
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
+#define _WITH_DIRECT2D
+
 // Windows 헤더 파일:
 #include <windows.h>
 
@@ -26,6 +28,17 @@
 
 using namespace std;
 
+//========================DX2D=============
+#include <d2d1_3.h>
+#include <dwrite.h>
+#include <dwrite_1.h>
+#include <d3d11on12.h>
+#include <d2d1_1helper.h>
+
+#include <d2d1effects.h>
+#include <wincodec.h>
+//========================DX2D=============
+
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <D3Dcompiler.h>
@@ -40,6 +53,11 @@ using namespace std;
 #include <dxgidebug.h>
 #endif
 
+
+
+
+
+
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
@@ -47,8 +65,8 @@ using Microsoft::WRL::ComPtr;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
-#define FRAME_BUFFER_WIDTH		640
-#define FRAME_BUFFER_HEIGHT		480
+#define FRAME_BUFFER_WIDTH		800
+#define FRAME_BUFFER_HEIGHT		600
 
 
 
@@ -68,6 +86,14 @@ enum class Culling_Type
 #pragma comment(lib, "dxgi.lib")
 
 #pragma comment(lib, "dxguid.lib")
+
+//========================DX2D=============
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "windowscodecs.lib")
+//========================DX2D=============
+
 
 // TODO: 프로그램에 필요한 추가 헤더는 여기에서 참조합니다.
 
@@ -96,6 +122,9 @@ inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT
 extern void DebugOutput(const std::string& message);
 extern float Lerp(float a, float b, float t);
 
+extern float PLAYER_SPEED_VALUE;
+extern float STONE_SPEED_VALUE;
+extern int DIFFICULTY_VALUE;
 
 namespace Vector3
 {

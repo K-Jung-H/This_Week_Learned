@@ -7,6 +7,20 @@
 #include "Shader.h"
 #include "Scene.h"
 
+
+void ApplyScalingTransform(ID2D1DeviceContext2* pd2dDevicecontext, const D2D1_RECT_F& area, float scale, const D2D1_MATRIX_3X2_F& oldTransform)
+{
+	float cx = area.left + (area.right - area.left) / 2.0f;
+	float cy = area.top + (area.bottom - area.top) / 2.0f;
+
+	D2D1_MATRIX_3X2_F Matrix_T1 = D2D1::Matrix3x2F::Translation(-cx, -cy);
+	D2D1_MATRIX_3X2_F Matrix_S = D2D1::Matrix3x2F::Scale(scale, scale);
+	D2D1_MATRIX_3X2_F Matrix_T2 = D2D1::Matrix3x2F::Translation(cx, cy);
+	D2D1_MATRIX_3X2_F finalTransform = Matrix_T1 * Matrix_S * Matrix_T2 * oldTransform;
+
+	pd2dDevicecontext->SetTransform(finalTransform);
+}
+
 XMFLOAT3 GetOrthogonalVector(const XMFLOAT3& axis)
 {
 	// axis를 XMVECTOR로 변환
@@ -46,7 +60,6 @@ XMFLOAT3 GetOrthogonalVector(const XMFLOAT3& axis)
 	XMStoreFloat3(&result, orthogonalVec);
 	return result;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -519,7 +532,7 @@ void CGameObject::Collider_Render(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	if (oobb_drawer) // 충돌 처리하는 객체라면 == 충돌체가 있나?
 	{
 		oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
-		oobb_drawer->UpdateOOBB_Data(pd3dCommandList, this);
+		oobb_drawer->UpdateOOBB_Data(pd3dCommandList, this, XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f));
 		oobb_drawer->Render(pd3dCommandList, pCamera);
 	}
 }
@@ -1002,7 +1015,7 @@ void OOBB_Drawer::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphics
 	m_pd3dcbOOBBInfo->Map(0, NULL, (void**)&m_pcbMappedOOBBInfo);
 }
 
-bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj)
+bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj, XMFLOAT4 line_color)
 {
 	// 게임 오브젝트에서 BoundingOrientedBox를 가져오고, NULL 체크
 	BoundingOrientedBox* pBoundingBox = g_obj->GetCollider();
@@ -1037,7 +1050,7 @@ bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CG
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(finalWorldMatrix));
 
 	// 상수 버퍼에 적용할 데이터를 설정
-	m_pcbMappedOOBBInfo->line_color = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);  // OBB의 색상
+	m_pcbMappedOOBBInfo->line_color = line_color;  // OBB의 색상
 	m_pcbMappedOOBBInfo->world_matrix = xmf4x4World;  // 계산된 월드 행렬
 
 	// GPU 상수 버퍼에 적용
@@ -1046,7 +1059,7 @@ bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CG
 
 	return true;
 }
-bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox)
+bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox, XMFLOAT4 line_color)
 {
 	// 게임 오브젝트에서 BoundingOrientedBox를 가져오고, NULL 체크
 	if (pBoundingBox == NULL)
@@ -1080,7 +1093,7 @@ bool OOBB_Drawer::UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XM
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(finalWorldMatrix));
 
 	// 상수 버퍼에 적용할 데이터를 설정
-	m_pcbMappedOOBBInfo->line_color = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);  // OBB의 색상
+	m_pcbMappedOOBBInfo->line_color = line_color;  // OBB의 색상
 	m_pcbMappedOOBBInfo->world_matrix = xmf4x4World;  // 계산된 월드 행렬
 
 	// GPU 상수 버퍼에 적용
@@ -1269,8 +1282,59 @@ void Screen_Rect::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 }
 
+void Screen_Rect::Message_Render(ID2D1DeviceContext2* pd2dDevicecontext, IDWriteTextFormat* font, ID2D1SolidColorBrush* brush)
+{
+	if (Is_Text_Screen)
+	{
+		if (Text_Scale > 1.0f)
+			Text_Scale -= 0.05f;
+		else
+			Text_Scale = 1.0f;
+
+		D2D1_RECT_F text_area =
+		{
+			static_cast<LONG>(sissor_rect_screen_size.left),
+			static_cast<LONG>(sissor_rect_screen_size.top),
+			static_cast<LONG>(sissor_rect_screen_size.right),
+			static_cast<LONG>(sissor_rect_screen_size.bottom)
+		};
+
+		D2D1_MATRIX_3X2_F oldTransform;
+		pd2dDevicecontext->GetTransform(&oldTransform);
+
+		ApplyScalingTransform(pd2dDevicecontext, text_area, Text_Scale, oldTransform);
+
+		std::wstring text_message = _T("");
+		if (Text_List.size() > 0)
+			text_message = Text_List[Text_Index];
+
+		pd2dDevicecontext->DrawTextW(text_message.c_str(), (UINT32)wcslen(text_message.c_str()), font, &text_area, brush);
+		pd2dDevicecontext->SetTransform(oldTransform);
+	}
+
+		if (m_pChild)
+			((Screen_Rect*)m_pChild)->Message_Render(pd2dDevicecontext, font, brush);
+
+		if (m_pSibling)
+			((Screen_Rect*)m_pSibling)->Message_Render(pd2dDevicecontext, font, brush);
+}
+
+void Screen_Rect::Change_Text(int n)
+{
+	if (n > 0)
+		if (Text_Index < Text_List.size() - 1)
+			Text_Index += 1;
+
+	if (n < 0)
+		if (Text_Index > 0)
+			Text_Index -= 1;
+}
+
 Screen_Rect* Screen_Rect::PickScreenObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, float* pfHitDistance)
 {
+	if (active == false)
+		return NULL;
+
 	float Distance = FLT_MAX; 
 	Screen_Rect* nearest_rect = NULL;
 
@@ -1540,6 +1604,38 @@ void Billboard_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
 	CRotatingObject::Animate(fTimeElapsed, pxmf4x4Parent);
 
 }
+
+//==================================================
+
+Black_Hole_Object::Black_Hole_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+	: Billboard_Object(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature)
+{
+	oobb_drawer = new OOBB_Drawer();
+	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	Gravity_area = new BoundingOrientedBox(XMFLOAT3(0.0f,0.0f,0.0f), XMFLOAT3(100.0f,100.0f,100.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+Black_Hole_Object::~Black_Hole_Object()
+{
+}
+
+void Black_Hole_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
+{
+	Billboard_Object::Animate(fTimeElapsed, pxmf4x4Parent);
+}
+void Black_Hole_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 1, &wave_info._Tiling, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 1, &wave_info._WaveSpeed, 1);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 1, &wave_info._WaveFrequency, 2);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 1, &wave_info._WaveAmplitude, 3);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 4, &wave_info.Color_Change, 4);
+
+	CGameObject::Render(pd3dCommandList, pCamera);
+}
+
+
 //==================================================
 
 Billboard_Animation_Object::Billboard_Animation_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
@@ -1564,7 +1660,8 @@ void Billboard_Animation_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4
 
 void Billboard_Animation_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	pd3dCommandList->SetGraphicsRoot32BitConstants(12, 1, &sprite_index, 0); 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(13, 1, &sprite_index, 0); 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(13, 1, &blue_boom, 1);
 
 	OnPrepareRender();
 

@@ -225,6 +225,7 @@ public:
 
 	static bool Show_Collider;
 	static bool Show_Attack_Collider;
+	static bool Show_ETC_Collider;
 };
 
 
@@ -282,7 +283,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
 
 public:
-
 };
 
 class Asteroid_Shader : public CObjectsShader
@@ -340,6 +340,9 @@ public:
 
 class Black_Hole_Shader : public CBillboardObjectsShader
 {
+private:
+	Black_Hole_Object* player_black_hole = NULL;
+	Black_Hole_Object* spawner_hole = NULL;
 public:
 	Black_Hole_Shader();
 	virtual ~Black_Hole_Shader();
@@ -349,6 +352,8 @@ public:
 
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
+	Black_Hole_Object* Get_Player_Black_Hole() { return player_black_hole; }
+
 };
 
 class Sprite_Billboard_Shader : public CBillboardObjectsShader

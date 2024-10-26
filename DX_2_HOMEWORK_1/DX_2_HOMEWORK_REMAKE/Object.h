@@ -43,8 +43,8 @@ public:
 	void SetMesh(CMesh* mesh) { oobb_Mesh = mesh; }
 
 	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj);
-	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox);
+	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj, XMFLOAT4 line_color);
+	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox, XMFLOAT4 line_color);
 
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
@@ -218,7 +218,7 @@ public:
 	Culling_Type culling_type = Culling_Type::None;
 
 	bool active = true;
-		
+	bool is_render = true;
 	void SetMesh(CMesh* pMesh);
 	void SetShader(CShader *pShader);
 	void SetShader(int nMaterial, CShader *pShader);
@@ -372,6 +372,10 @@ public:
 
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	void Message_Render(ID2D1DeviceContext2* pd2dDevicecontext, IDWriteTextFormat* font, ID2D1SolidColorBrush* brush);
+
+	void Change_Text(int n);
+
 
 	Screen_Rect* PickScreenObjectByRayIntersection(XMFLOAT3& xmf3PickPosition, float* pfHitDistance);
 	
@@ -379,6 +383,12 @@ public:
 public:
 	bool active = true;
 	bool sissor_rect_clip = false;
+	bool Is_Text_Screen = false;
+
+	vector<wstring> Text_List;
+	float Text_Scale = 1.0f;
+	int Text_Index = 0;
+	
 	D3D12_RECT sissor_rect_screen_size;
 	float scroll_value = 0.0f;
 
@@ -472,11 +482,34 @@ public:
 	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
 };
 
+
+struct Black_Hole_Wave_Info
+{
+	float _Tiling = 1.0f; // 텍스처 타일링
+	float _WaveSpeed = 8.0f; // 물결 속도
+	float _WaveFrequency = 10.0f; // 물결의 주파수 (파동의 빈도)
+	float _WaveAmplitude = 0.05f; // 물결의 진폭 (물결의 강도)
+	XMFLOAT4 Color_Change;
+};
+
+class Black_Hole_Object : public Billboard_Object
+{
+public:
+	Black_Hole_Wave_Info wave_info;
+	BoundingOrientedBox* Gravity_area = NULL;
+public:
+	Black_Hole_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	~Black_Hole_Object();
+	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+};
+
 class Billboard_Animation_Object : public Billboard_Object
 {
 public:
 	UINT sprite_index = 0;
-
+	bool blue_boom = false;
 	Billboard_Animation_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	~Billboard_Animation_Object();
 	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);

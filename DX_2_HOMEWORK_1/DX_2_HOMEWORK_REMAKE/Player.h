@@ -36,6 +36,9 @@ protected:
 	CShader						*m_pShader = NULL;
 	BoundingOrientedBox* m_player_bounding_box = NULL;
 	BoundingOrientedBox* m_player_Sight_bounding_box = NULL;
+	BoundingOrientedBox* m_player_navi_bounding_box = NULL;
+
+	
 public:
 	CPlayer();
 	virtual ~CPlayer();
@@ -85,6 +88,8 @@ public:
 
 	virtual BoundingOrientedBox* GetCollider();
 	BoundingOrientedBox* Get_Light_Collider();
+	BoundingOrientedBox* Get_Navi_Collider();
+	
 };
 
 class CAirplanePlayer : public CPlayer

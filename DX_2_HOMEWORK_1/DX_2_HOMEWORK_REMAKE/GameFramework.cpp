@@ -11,7 +11,8 @@ CGameFramework::CGameFramework()
 	m_pdxgiSwapChain = NULL;
 	m_pd3dDevice = NULL;
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++) m_ppd3dSwapChainBackBuffers[i] = NULL;
+	for (int i = 0; i < m_nSwapChainBuffers; i++) 
+		m_ppd3dSwapChainBackBuffers[i] = NULL;
 	m_nSwapChainBufferIndex = 0;
 
 	m_pd3dCommandAllocator = NULL;
@@ -26,7 +27,15 @@ CGameFramework::CGameFramework()
 
 	m_hFenceEvent = NULL;
 	m_pd3dFence = NULL;
-	for (int i = 0; i < m_nSwapChainBuffers; i++) m_nFenceValues[i] = 0;
+
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+	{
+		m_nFenceValues[i] = 0;
+#ifdef _WITH_DIRECT2D
+		m_ppd3d11WrappedBackBuffers[i] = NULL;
+		m_ppd2dRenderTargets[i] = NULL;
+#endif
+	}
 
 	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
 	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
@@ -51,6 +60,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
+
+#ifdef _WITH_DIRECT2D
+	CreateDirect2DDevice();
+#endif
 
 	CoInitialize(NULL);
 
@@ -173,6 +186,95 @@ void CGameFramework::CreateDirect3DDevice()
 	if (pd3dAdapter) pd3dAdapter->Release();
 }
 
+
+#ifdef _WITH_DIRECT2D
+void CGameFramework::CreateDirect2DDevice()
+{
+	UINT nD3D11DeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+#if defined(_DEBUG) || defined(DBG)
+	nD3D11DeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+	ID3D11Device* pd3d11Device = NULL;
+	ID3D12CommandQueue* ppd3dCommandQueues[] = { m_pd3dCommandQueue };
+	HRESULT hResult = ::D3D11On12CreateDevice(m_pd3dDevice, nD3D11DeviceFlags, NULL, 0, reinterpret_cast<IUnknown**>(ppd3dCommandQueues), _countof(ppd3dCommandQueues), 0, &pd3d11Device, &m_pd3d11DeviceContext, NULL);
+	hResult = pd3d11Device->QueryInterface(__uuidof(ID3D11On12Device), (void**)&m_pd3d11On12Device);
+	if (pd3d11Device) pd3d11Device->Release();
+
+	D2D1_FACTORY_OPTIONS nD2DFactoryOptions = { D2D1_DEBUG_LEVEL_NONE };
+#if defined(_DEBUG) || defined(DBG)
+	nD2DFactoryOptions.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+	ID3D12InfoQueue* pd3dInfoQueue = NULL;
+	if (SUCCEEDED(m_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pd3dInfoQueue))))
+	{
+		D3D12_MESSAGE_SEVERITY pd3dSeverities[] =
+		{
+			D3D12_MESSAGE_SEVERITY_INFO,
+		};
+
+		D3D12_MESSAGE_ID pd3dDenyIds[] =
+		{
+			D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,
+		};
+
+		D3D12_INFO_QUEUE_FILTER d3dInforQueueFilter = { };
+		d3dInforQueueFilter.DenyList.NumSeverities = _countof(pd3dSeverities);
+		d3dInforQueueFilter.DenyList.pSeverityList = pd3dSeverities;
+		d3dInforQueueFilter.DenyList.NumIDs = _countof(pd3dDenyIds);
+		d3dInforQueueFilter.DenyList.pIDList = pd3dDenyIds;
+
+		pd3dInfoQueue->PushStorageFilter(&d3dInforQueueFilter);
+	}
+	pd3dInfoQueue->Release();
+#endif
+
+	hResult = ::D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory3), &nD2DFactoryOptions, (void**)&m_pd2dFactory);
+
+	IDXGIDevice* pdxgiDevice = NULL;
+	hResult = m_pd3d11On12Device->QueryInterface(__uuidof(IDXGIDevice), (void**)&pdxgiDevice);
+	hResult = m_pd2dFactory->CreateDevice(pdxgiDevice, &m_pd2dDevice);
+	hResult = m_pd2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_pd2dDeviceContext);
+	hResult = ::DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_pdWriteFactory);
+	if (pdxgiDevice)
+		pdxgiDevice->Release();
+
+	m_pd2dDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(0.3f, 0.0f, 0.0f, 0.5f), &m_pd2dbrBackground);
+	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF(0x9ACD32, 1.0f)), &m_pd2dbrBorder);
+	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f), &m_pd2dbrText);
+
+	hResult = m_pdWriteFactory->CreateTextFormat(L"맑은 고딕", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 40.0f, L"ko-KR", &m_pdw_Timer_Font);
+	hResult = m_pdw_Timer_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdw_Timer_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+	hResult = m_pdWriteFactory->CreateTextFormat(L"나눔고딕", NULL, DWRITE_FONT_WEIGHT_EXTRA_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"ko-KR", &m_pdw_UI_Text_Font);
+	hResult = m_pdw_UI_Text_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdw_UI_Text_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+	hResult = m_pdWriteFactory->CreateTextFormat(L"맑은 고딕", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 30.0f, L"ko-KR", &m_pdw_Score_Font);
+	hResult = m_pdw_Score_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdw_Score_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+
+
+
+	float fDpi = (float)GetDpiForWindow(m_hWnd);
+	D2D1_BITMAP_PROPERTIES1 d2dBitmapProperties = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), fDpi, fDpi);
+
+	for (UINT i = 0; i < m_nSwapChainBuffers; i++)
+	{
+		D3D11_RESOURCE_FLAGS d3d11Flags = { D3D11_BIND_RENDER_TARGET };
+		m_pd3d11On12Device->CreateWrappedResource(m_ppd3dSwapChainBackBuffers[i], &d3d11Flags, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, IID_PPV_ARGS(&m_ppd3d11WrappedBackBuffers[i]));
+		IDXGISurface* pdxgiSurface = NULL;
+		m_ppd3d11WrappedBackBuffers[i]->QueryInterface(__uuidof(IDXGISurface), (void**)&pdxgiSurface);
+		m_pd2dDeviceContext->CreateBitmapFromDxgiSurface(pdxgiSurface, &d2dBitmapProperties, &m_ppd2dRenderTargets[i]);
+		if (pdxgiSurface) pdxgiSurface->Release();
+	}
+}
+#endif
+
 void CGameFramework::CreateCommandQueueAndList()
 {
 	HRESULT hResult;
@@ -273,8 +375,17 @@ void CGameFramework::ChangeSwapChainState()
 	dxgiTargetParameters.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	m_pdxgiSwapChain->ResizeTarget(&dxgiTargetParameters);
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i]) m_ppd3dSwapChainBackBuffers[i]->Release();
-
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+	{
+		if (m_ppd3dSwapChainBackBuffers[i]) 
+			m_ppd3dSwapChainBackBuffers[i]->Release();
+#ifdef _WITH_DIRECT2D
+		if (m_ppd3d11WrappedBackBuffers[i])
+			m_ppd3d11WrappedBackBuffers[i]->Release();
+		if (m_ppd2dRenderTargets[i])
+			m_ppd2dRenderTargets[i]->Release();
+#endif
+	}
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
 	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
 	m_pdxgiSwapChain->ResizeBuffers(m_nSwapChainBuffers, m_nWndClientWidth, m_nWndClientHeight, dxgiSwapChainDesc.BufferDesc.Format, dxgiSwapChainDesc.Flags);
@@ -312,8 +423,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 			case VK_TAB:
-				if(rendering_scene != game_scene)
-					rendering_scene = game_scene;
+				m_pPlayer->Rotate(0.0f, 6.6f, 0.0f);
+
 				break;
 
 				case VK_ESCAPE:
@@ -382,7 +493,10 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer->Release();
 	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap->Release();
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i]) m_ppd3dSwapChainBackBuffers[i]->Release();
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+		if (m_ppd3dSwapChainBackBuffers[i]) 
+			m_ppd3dSwapChainBackBuffers[i]->Release();
+
 	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap->Release();
 
 	if (m_pd3dCommandAllocator) m_pd3dCommandAllocator->Release();
@@ -395,6 +509,28 @@ void CGameFramework::OnDestroy()
 	if (m_pdxgiSwapChain) m_pdxgiSwapChain->Release();
     if (m_pd3dDevice) m_pd3dDevice->Release();
 	if (m_pdxgiFactory) m_pdxgiFactory->Release();
+
+
+#ifdef _WITH_DIRECT2D
+	if (m_pd2dbrBackground) m_pd2dbrBackground->Release();
+	if (m_pd2dbrBorder) m_pd2dbrBorder->Release();
+	if (m_pdw_Timer_Font) m_pdw_Timer_Font->Release();
+	if (m_pdwTextLayout) m_pdwTextLayout->Release();
+	if (m_pd2dbrText) m_pd2dbrText->Release();
+
+	if (m_pd2dDeviceContext) m_pd2dDeviceContext->Release();
+	if (m_pd2dDevice) m_pd2dDevice->Release();
+	if (m_pdWriteFactory) m_pdWriteFactory->Release();
+	if (m_pd3d11On12Device) m_pd3d11On12Device->Release();
+	if (m_pd3d11DeviceContext) m_pd3d11DeviceContext->Release();
+	if (m_pd2dFactory) m_pd2dFactory->Release();
+
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+	{
+		if (m_ppd3d11WrappedBackBuffers[i]) m_ppd3d11WrappedBackBuffers[i]->Release();
+		if (m_ppd2dRenderTargets[i]) m_ppd2dRenderTargets[i]->Release();
+	}
+#endif
 
 #if defined(_DEBUG)
 	IDXGIDebug1	*pdxgiDebug = NULL;
@@ -410,17 +546,27 @@ void CGameFramework::BuildObjects()
 
 	start_scene = new Start_Scene();
 	if (start_scene)
+	{
 		start_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+		start_scene->Add_Font(m_pdw_UI_Text_Font);
+		start_scene->Add_Font(m_pdw_Timer_Font);
+		start_scene->Add_Font(m_pdw_Score_Font);
+		start_scene->Add_Brush(m_pd2dbrText);
 
+
+	}
 	game_scene = new Game_Scene();
 	if (game_scene)
 	{
 		game_scene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
-
+		game_scene->Add_Font(m_pdw_UI_Text_Font);
+		game_scene->Add_Font(m_pdw_Timer_Font);
+		game_scene->Add_Font(m_pdw_Score_Font);
+		game_scene->Add_Brush(m_pd2dbrText);
 	}
 
 	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature(), game_scene->GetTerrain());
-	game_player->SetPosition(XMFLOAT3(0.0f, 100.0f, 0.0f));
+	game_player->SetPosition(XMFLOAT3(100.0f, 100.0f, 100.0f));
 
 	if (game_scene->enemy_shader != NULL)
 		game_scene->enemy_shader->Set_Target(game_player);
@@ -524,12 +670,12 @@ void CGameFramework::ProcessInput()
 		{
 			if (cxDelta || cyDelta)
 			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+//				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+//					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 10.0f, true);
+			if (dwDirection)
+				m_pPlayer->Move(dwDirection, 10.0f * PLAYER_SPEED_VALUE , true);
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
@@ -576,19 +722,38 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {
+	bool framework_pause = false;
+
 	m_GameTimer.Tick(60.0f);
 
-	ProcessInput();
+	if (rendering_scene == game_scene)
+	{
+		if (game_scene->Get_Pause_State())
+			framework_pause = true;
 
-	AnimateObjects();
+		if (game_scene->Get_Reset_State())
+		{
+			game_scene->Reset();
+			rendering_scene->screen_shader->Set_Start_Sceen_UI();
+			rendering_scene = start_scene;
+			m_pCamera = rendering_scene->m_pPlayer->ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
+		}
+	}
+	if (!framework_pause)
+	{
+		ProcessInput();
+		AnimateObjects();
+	}
 
 	if (game_scene != NULL && start_scene->Get_Start_Signal())
 	{
+		start_scene->Reset();
 		start_scene->Set_Start_Signal(false);
 		rendering_scene->screen_shader->Set_Game_Sceen_UI();
 		rendering_scene = game_scene;
 		m_pCamera = rendering_scene->m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	}
+
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
@@ -617,25 +782,56 @@ void CGameFramework::FrameAdvance()
 	if (rendering_scene)
 	{
 		rendering_scene->OnPrepareRender(m_pd3dCommandList, m_pCamera);
-		UpdateShaderVariables();
-	}
-	if (rendering_scene) 
+
+		if (!framework_pause)
+			UpdateShaderVariables();		
+
 		rendering_scene->Render(m_pd3dCommandList, NULL); // 각 씬에 있는 플레이어의 카메라 불러와서 그걸로 렌더링 
-
-#ifdef _WITH_PLAYER_TOP
-	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-#endif
+	}
 
 
+
+	// DX2D 사용하는 상황
+#ifdef _WITH_DIRECT2D
+	// DX2D를 사용하는 경우 DX11로 명령 전달해야 함
+	// 현재까지의 D3D12의 커멘드 리스트 닫고 GPU로 전달
+	hResult = m_pd3dCommandList->Close();
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+#else
+	// DIRECT2D 안쓰는 상황이면, Back 버퍼의 리소스 상태를 다시 출력 대기 상태로 전환
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+#endif
 
-	hResult = m_pd3dCommandList->Close();
-	
-	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
-	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+	// DX2D 사용하는 상황
+#ifdef _WITH_DIRECT2D
+
+	m_pd2dDeviceContext->SetTarget(m_ppd2dRenderTargets[m_nSwapChainBufferIndex]);
+	ID3D11Resource* ppd3dResources[] = { m_ppd3d11WrappedBackBuffers[m_nSwapChainBufferIndex] };
+
+	m_pd3d11On12Device->AcquireWrappedResources(ppd3dResources, _countof(ppd3dResources));
+
+	m_pd2dDeviceContext->BeginDraw();
+
+	m_pd2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+
+	// 출력 화면 크기
+	D2D1_SIZE_F szRenderTarget = m_ppd2dRenderTargets[m_nSwapChainBufferIndex]->GetSize();
+
+	// 2D 문구 출력
+	if (rendering_scene)
+		rendering_scene->Message_Render(m_pd2dDeviceContext);
+
+	m_pd2dDeviceContext->EndDraw();
+
+	m_pd3d11On12Device->ReleaseWrappedResources(ppd3dResources, _countof(ppd3dResources));
+
+	//D3D11 의 명령들 모두 GPU로 전달
+	m_pd3d11DeviceContext->Flush();
+#endif
 
 	WaitForGpuComplete();
 

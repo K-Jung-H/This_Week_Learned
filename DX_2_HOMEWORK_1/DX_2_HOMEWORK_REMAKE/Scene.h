@@ -90,8 +90,13 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+	virtual void Message_Render(ID2D1DeviceContext2* pd2dDevicecontext);
 
 	virtual void ReleaseUploadBuffers();
+	virtual void Reset();
+
+	virtual void Check_Click_Button(string button_info);
+
 	CHeightMapTerrain* GetTerrain() { return(m_pTerrain); }
 	CPlayer								*m_pPlayer = NULL;
 	float m_fElapsedTime = 0.0f;
@@ -109,6 +114,11 @@ public:
 	CSkyBox								*m_pSkyBox = NULL;
 	CHeightMapTerrain* m_pTerrain = NULL;
 
+	std::vector<IDWriteTextFormat*> write_font_list;
+	std::vector< ID2D1SolidColorBrush*> brush_list;
+
+	void Add_Font(IDWriteTextFormat* pfont) { write_font_list.push_back(pfont); }
+	void Add_Brush(ID2D1SolidColorBrush* pbrush) { brush_list.push_back(pbrush); }
 
 public:
 	static CDescriptorHeap*				m_pDescriptorHeap;
@@ -156,11 +166,15 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	virtual void Message_Render(ID2D1DeviceContext2* pd2dDevicecontext);
 
 	virtual void ReleaseUploadBuffers();
 	
 	void Set_Start_Signal(bool n) { start_button_down = n; }
 	bool Get_Start_Signal() { return start_button_down; }
+
+	virtual void Check_Click_Button(string button_info);
+	virtual void Reset();
 
 };
 
@@ -186,6 +200,8 @@ protected:
 	std::string selected_screen_info;
 
 	bool Show_Collider = false;
+	bool Pause_Mode = false;
+	bool Reset_Signal = false;
 
 public:
 	BOX_Shader* box_shader = NULL;
@@ -216,11 +232,19 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	virtual void Message_Render(ID2D1DeviceContext2* pd2dDevicecontext);
+	bool Get_Pause_State() { return Pause_Mode; }
+	bool Get_Reset_State() { return Reset_Signal; }
 
 	virtual void ReleaseUploadBuffers();
+	virtual void Check_Click_Button(string button_info);
+	virtual void Reset();
 
-	void Add_Boom_Effect(XMFLOAT3 exlposion_pos);
+
+	void Add_Boom_Effect(XMFLOAT3 exlposion_pos, bool color_change = false);
 
 	void Collision_Defender(CPlayer* player_ptr, CObjectsShader* pshader);
 	void Check_Enemy_Collision();
+	void Check_Enemy_Black_Hole();
+	void Check_Bullet_Collision();
 };

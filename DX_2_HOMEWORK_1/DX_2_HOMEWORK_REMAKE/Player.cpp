@@ -108,12 +108,19 @@ void CPlayer::Rotate(float x, float y, float z)
 			if (m_fRoll < -20.0f) { z -= (m_fRoll + 20.0f); m_fRoll = -20.0f; }
 		}
 		m_pCamera->Rotate(x, y, z);
+		//if (x != 0.0f)
+		//{
+		//	XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
+		//	m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+		//	m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		//}
 		if (y != 0.0f)
 		{
 			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
 			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
 			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
 		}
+
 	}
 	else if (nCurrentCameraMode == SPACESHIP_CAMERA)
 	{
@@ -145,9 +152,12 @@ void CPlayer::Rotate(float x, float y, float z)
 
 void CPlayer::Update(float fTimeElapsed)
 {
+	//m_xmf3Velocity.x = m_xmf3Velocity.x * PLAYER_SPEED_VALUE;
+	//m_xmf3Velocity.z = m_xmf3Velocity.z * PLAYER_SPEED_VALUE;
+
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
 	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-	float fMaxVelocityXZ = m_fMaxVelocityXZ;
+	float fMaxVelocityXZ = m_fMaxVelocityXZ * PLAYER_SPEED_VALUE;
 	if (fLength > m_fMaxVelocityXZ)
 	{
 		m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
@@ -155,7 +165,9 @@ void CPlayer::Update(float fTimeElapsed)
 	}
 	float fMaxVelocityY = m_fMaxVelocityY;
 	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
-	if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
+
+	if (fLength > m_fMaxVelocityY) 
+		m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
 
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 	Move(xmf3Velocity, false);
@@ -164,14 +176,24 @@ void CPlayer::Update(float fTimeElapsed)
 		OnPlayerUpdateCallback(fTimeElapsed);
 
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
-	if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->SetLookAt(m_xmf3Position);
+
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) 
+		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+
+	if (m_pCameraUpdatedContext) 
+		OnCameraUpdateCallback(fTimeElapsed);
+
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) 
+		m_pCamera->SetLookAt(m_xmf3Position);
+
 	m_pCamera->RegenerateViewMatrix();
 
 	fLength = Vector3::Length(m_xmf3Velocity);
 	float fDeceleration = (m_fFriction * fTimeElapsed);
-	if (fDeceleration > fLength) fDeceleration = fLength;
+
+	if (fDeceleration > fLength) 
+		fDeceleration = fLength;
+
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
 }
 
@@ -275,23 +297,6 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		if (m_pShader)
 			m_pShader->Render(pd3dCommandList, pCamera, 0);
 		CGameObject::Render(pd3dCommandList, pCamera);
-
-		if (CObjectsShader::Show_Collider)
-			if (m_player_bounding_box)
-			{
-				oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
-				oobb_drawer->UpdateOOBB_Data(pd3dCommandList, this);
-				oobb_drawer->Render(pd3dCommandList, pCamera);
-			}
-
-		if (CObjectsShader::Show_Attack_Collider)
-			if (m_player_Sight_bounding_box)
-			{
-				oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
-				oobb_drawer->UpdateOOBB_Data(pd3dCommandList, &m_xmf4x4World, Get_Light_Collider());
-				oobb_drawer->Render(pd3dCommandList, pCamera);
-			}
-
 	}
 }
 
@@ -348,7 +353,32 @@ BoundingOrientedBox* CPlayer::Get_Light_Collider()
 
 	return PlayerBoundingBox;
 }
+BoundingOrientedBox* CPlayer::Get_Navi_Collider()
+{
+	// 기존 바운딩 박스를 가져옵니다.
+	BoundingOrientedBox* PlayerBoundingBox = new BoundingOrientedBox(*m_player_navi_bounding_box);
+	XMFLOAT3 player_pos = GetPosition();
 
+	// 월드 행렬에서 회전 성분 추출
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(worldMatrix);
+
+	// 바운딩 박스의 중심 좌표를 플레이어의 회전 값에 맞춰 회전
+	XMVECTOR boxCenter = XMLoadFloat3(&PlayerBoundingBox->Center);
+	XMVECTOR rotatedCenter = XMVector3Rotate(boxCenter, quaternionRotation);
+
+	// 플레이어 위치를 적용하여 월드 좌표계로 변환
+	XMVECTOR playerPosition = XMLoadFloat3(&player_pos);
+	XMVECTOR newPosition = XMVectorAdd(rotatedCenter, playerPosition);
+
+	// 변환된 중심 좌표를 다시 저장
+	XMStoreFloat3(&PlayerBoundingBox->Center, newPosition);
+
+	// 회전 정보를 바운딩 박스에 적용
+	XMStoreFloat4(&PlayerBoundingBox->Orientation, quaternionRotation);
+
+	return PlayerBoundingBox;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CAirplanePlayer
 
@@ -363,9 +393,14 @@ CAirplanePlayer::CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommand
 	SetChild(pGameObject);
 	
 	m_player_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(10.0f, 5.0f, 10.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+
+	float detect_range_length = 30.0f;
+	m_player_navi_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(detect_range_length, 5.0f, detect_range_length), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+
 	
 	float light_length = 50.0f;
 	m_player_Sight_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, light_length), XMFLOAT3(10.0f, 10.0f, light_length), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+
 
 	oobb_drawer = new OOBB_Drawer();
 	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -442,7 +477,7 @@ CCamera *CAirplanePlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 		case THIRD_PERSON_CAMERA:
 			SetFriction(20.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
-			SetMaxVelocityXZ(50.5f);
+			SetMaxVelocityXZ(50.0f);
 			SetMaxVelocityY(20.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);

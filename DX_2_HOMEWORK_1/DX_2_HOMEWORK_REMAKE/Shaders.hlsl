@@ -455,6 +455,17 @@ float4 PS_OOBB(VS_OOBB_OUTPUT input) : SV_TARGET
 }
 
 
+
+
+cbuffer Black_Hole_Wave_Info : register(b8)
+{
+    float _Tiling;
+    float _WaveSpeed;
+    float _WaveFrequency;
+    float _WaveAmplitude;
+    float4 Color_Change;
+};
+
 struct VS_TEXTURED_INPUT
 {
     float3 position : POSITION;
@@ -482,14 +493,61 @@ float4 PSBillboard(VS_TEXTURED_OUTPUT input) : SV_TARGET
     return (cColor);
 }
 
+
+float4 SwizzleColor(float4 color)
+{
+    int index1 = -1;
+    int index2 = -1;
+    
+    if (Color_Change.r == 1.0f)
+    {
+        if (index1 == -1)
+            index1 = 0;
+        else
+            index2 = 0;
+    }
+    if (Color_Change.g == 1.0f)
+    {
+        if (index1 == -1)
+            index1 = 1;
+        else
+            index2 = 1;
+    }
+    if (Color_Change.b == 1.0f)
+    {
+        if (index1 == -1)
+            index1 = 2;
+        else
+            index2 = 2;
+    }
+    
+    if (index2 != -1)
+    {
+        color = color * 2;
+        // R과 B가 서로 교환되는 경우
+        if (index1 == 0 && index2 == 2)
+            return float4(color.b, color.g, color.r, color.a);
+        if (index1 == 2 && index2 == 0)
+            return float4(color.r, color.g, color.b, color.a);
+        // R과 G가 서로 교환되는 경우
+        if (index1 == 0 && index2 == 1)
+            return float4(color.g, color.r, color.b, color.a);
+        if (index1 == 1 && index2 == 0)
+            return float4(color.r, color.g, color.b, color.a);
+        // G와 B가 서로 교환되는 경우
+        if (index1 == 1 && index2 == 2)
+            return float4(color.r, color.b, color.g, color.a);
+        if (index1 == 2 && index2 == 1)
+            return float4(color.r, color.g, color.b, color.a);
+    }
+
+    // 하나만 1인 경우 or  1이 없는 경우 기본값 반환
+    return color;
+
+}
+
 float4 PSBillboard_Black_Hole(VS_TEXTURED_OUTPUT input) : SV_TARGET
 {
-    // 전역 변수 - 물결 효과 조정
-    float _Tiling = 1.0f; // 텍스처 타일링
-    float _WaveSpeed = 8.0f; // 물결 속도
-    float _WaveFrequency = 10.0f; // 물결의 주파수 (파동의 빈도)
-    float _WaveAmplitude = 0.05f; // 물결의 진폭 (물결의 강도)
-    
     // UV 좌표를 중앙 기준으로 이동하여 왜곡 준비
     float2 uv = (input.uv - 0.5) * _Tiling;
 
@@ -507,16 +565,17 @@ float4 PSBillboard_Black_Hole(VS_TEXTURED_OUTPUT input) : SV_TARGET
 
     // 텍스처에서 왜곡된 UV 좌표로 색상 샘플링
     float4 cColor = Default_Texture.SampleLevel(gssWrap, distortedUV, 0);
-
+    cColor = SwizzleColor(cColor);
     return cColor;
 }
 
 
 
 
-cbuffer Sprite_Index_Buffer : register(b8)
+cbuffer Sprite_Index_Buffer : register(b9)
 {
     uint sprite_index;
+    bool swizzle;
 }
 
 struct VS_SPRITE_BILLBOARD_INPUT
@@ -598,6 +657,9 @@ float4 PS_Billboard_Animation(VS_SPRITE_BILLBOARD_OUTPUT input) : SV_TARGET
     // 텍스처에서 색상을 샘플링합니다.
     float4 cColor = Default_Texture.Sample(gssWrap, uv);
     
+    if (swizzle)
+        cColor = float4(cColor.g, cColor.r, cColor.b, cColor.a);
+        
     return cColor; // 샘플링된 색상을 반환
 }
 

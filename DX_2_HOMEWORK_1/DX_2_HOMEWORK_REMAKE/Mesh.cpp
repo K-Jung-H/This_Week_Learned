@@ -596,6 +596,18 @@ Billboard_Mesh::Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_d3dAnimationVertexinfoBufferView.BufferLocation = m_pd3dAnimationVertexinfoBuffer->GetGPUVirtualAddress();
 	m_d3dAnimationVertexinfoBufferView.StrideInBytes = sizeof(UINT);
 	m_d3dAnimationVertexinfoBufferView.SizeInBytes = sizeof(UINT) * m_nVertices;
+
+	//==========================================================================
+	
+	float centerX = (left + right) / 2.0f;
+	float centerY = (top + bottom) / 2.0f;
+
+	float extentX = (right - left) / 2.0f;
+	float extentY = (bottom - top) / 2.0f;
+	float extentZ = (extentX + extentY) / 2.0f;
+
+	// 바운딩 박스 생성
+	mesh_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(extentX, extentY, extentZ), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 Billboard_Mesh::~Billboard_Mesh()
 {
@@ -774,13 +786,13 @@ Textured_Cube_Mesh::Textured_Cube_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 		}
 	}
 
-	m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
+	m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
 
 	m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
 	m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
-	m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+	m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
 
 	m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
 	m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);

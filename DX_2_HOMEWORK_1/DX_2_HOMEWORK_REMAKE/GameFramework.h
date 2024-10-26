@@ -1,8 +1,5 @@
 #pragma once
 
-#define FRAME_BUFFER_WIDTH		640
-#define FRAME_BUFFER_HEIGHT		480
-
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
@@ -98,6 +95,33 @@ private:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+
+
+private:
+	// DX2DÀü¿ë
+#ifdef _WITH_DIRECT2D
+	ID3D11On12Device* m_pd3d11On12Device = NULL;
+	ID3D11DeviceContext* m_pd3d11DeviceContext = NULL;
+	ID2D1Factory3* m_pd2dFactory = NULL;
+	IDWriteFactory* m_pdWriteFactory = NULL;
+	ID2D1Device2* m_pd2dDevice = NULL;
+	ID2D1DeviceContext2* m_pd2dDeviceContext = NULL;
+
+	ID3D11Resource* m_ppd3d11WrappedBackBuffers[m_nSwapChainBuffers];
+	ID2D1Bitmap1* m_ppd2dRenderTargets[m_nSwapChainBuffers];
+
+	ID2D1SolidColorBrush* m_pd2dbrBackground = NULL;
+	ID2D1SolidColorBrush* m_pd2dbrBorder = NULL;
+	ID2D1SolidColorBrush* m_pd2dbrText = NULL;
+
+	IDWriteTextFormat* m_pdw_Timer_Font = NULL;
+	IDWriteTextFormat* m_pdw_UI_Text_Font = NULL;
+	IDWriteTextFormat* m_pdw_Score_Font = NULL;
+
+	IDWriteTextLayout* m_pdwTextLayout = NULL;
+
+	void CreateDirect2DDevice();
+#endif
 
 protected:
 	ID3D12Resource* m_pd3dcbFrameworkInfo = NULL;

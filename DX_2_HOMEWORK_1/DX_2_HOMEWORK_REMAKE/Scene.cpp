@@ -208,7 +208,7 @@ ID3D12RootSignature* CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevic
 		pd3dDescriptorRanges[4].RegisterSpace = 0;
 		pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
-	D3D12_ROOT_PARAMETER pd3dRootParameters[13];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[14];
 	{
 		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
@@ -274,10 +274,16 @@ ID3D12RootSignature* CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevic
 		pd3dRootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		//==================================================
 		pd3dRootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[12].Constants.Num32BitValues = 1;
-		pd3dRootParameters[12].Constants.ShaderRegister = 8;  // sprite_index
+		pd3dRootParameters[12].Constants.Num32BitValues = 8;
+		pd3dRootParameters[12].Constants.ShaderRegister = 8;  // black_hole_wave
 		pd3dRootParameters[12].Constants.RegisterSpace = 0;
 		pd3dRootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		//==================================================
+		pd3dRootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[13].Constants.Num32BitValues = 2;
+		pd3dRootParameters[13].Constants.ShaderRegister = 9;  // sprite_index
+		pd3dRootParameters[13].Constants.RegisterSpace = 0;
+		pd3dRootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		//==================================================
 	}
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[3];
@@ -414,6 +420,60 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 	return(false);
 }
 
+void  CScene::Check_Click_Button(string button_info)
+{
+
+	if (button_info == "option_player_speed_minus" || button_info == "option_player_speed_plus")
+	{
+		screen_shader->option_player_speed_ptr->Text_Scale = 1.5f;
+
+		if (button_info == "option_player_speed_minus")
+			screen_shader->option_player_speed_ptr->Change_Text(-1);
+
+		if (button_info == "option_player_speed_plus")
+			screen_shader->option_player_speed_ptr->Change_Text(+1);
+	}
+
+	if (button_info == "option_stone_speed_minus" || button_info == "option_stone_speed_plus")
+	{
+		screen_shader->option_stone_speed_ptr->Text_Scale = 1.5f;
+
+		if (button_info == "option_stone_speed_minus")
+			screen_shader->option_stone_speed_ptr->Change_Text(-1);
+
+		if (button_info == "option_stone_speed_plus")
+			screen_shader->option_stone_speed_ptr->Change_Text(+1);
+	}
+
+	if (button_info == "option_difficulty_minus" || button_info == "option_difficulty_plus")
+	{
+		screen_shader->option_difficulty_ptr->Text_Scale = 1.5f;
+
+		if (button_info == "option_difficulty_minus")
+			screen_shader->option_difficulty_ptr->Change_Text(-1);
+
+		if (button_info == "option_difficulty_plus")
+			screen_shader->option_difficulty_ptr->Change_Text(+1);
+	}
+
+	if (button_info == "check_button" || button_info == "x_button")
+	{
+		if (button_info == "check_button")
+		{
+			PLAYER_SPEED_VALUE = screen_shader->option_player_speed_ptr->Text_Index + 1;
+			STONE_SPEED_VALUE = screen_shader->option_stone_speed_ptr->Text_Index + 1;
+			DIFFICULTY_VALUE = screen_shader->option_difficulty_ptr->Text_Index + 1;
+		}
+		else if (button_info == "x_button")
+		{
+			screen_shader->option_player_speed_ptr->Text_Index = PLAYER_SPEED_VALUE - 1;
+			screen_shader->option_stone_speed_ptr->Text_Index = STONE_SPEED_VALUE - 1;
+			screen_shader->option_difficulty_ptr->Text_Index = DIFFICULTY_VALUE - 1;
+		}
+	}
+
+}
+
 void CScene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Animate(fTimeElapsed, NULL);
@@ -435,6 +495,14 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 {
 }
 
+void CScene::Message_Render(ID2D1DeviceContext2* pd2dDevicecontext)
+{
+}
+
+void CScene::Reset()
+{
+
+}
 
 //=============================================================================================
 
@@ -537,32 +605,11 @@ bool Start_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 
 		selected_screen_info = screen_shader->PickObjectPointedByCursor(screen_x, screen_y, NULL);
 		if (selected_screen_info != "")
+		{
 			DebugOutput(selected_screen_info);
-
-		if (selected_screen_info == "menu_icon_button")
-			screen_shader->pause_screen_ptr->active = !screen_shader->pause_screen_ptr->active;
-
-		if (selected_screen_info == "option_button" || selected_screen_info == "option_icon_button")
-		{
-			screen_shader->option_screen_ptr->active = true;
-			screen_shader->option_icon_button_ptr->active = false;
-			screen_shader->info_icon_button_ptr->active = false;
-
-		}
-		if (selected_screen_info == "check_button" || selected_screen_info == "x_button")
-		{
-			screen_shader->option_screen_ptr->active = false;
-			screen_shader->option_icon_button_ptr->active = true;
-			screen_shader->info_icon_button_ptr->active = true;
+			Check_Click_Button(selected_screen_info);
 		}
 
-		if (selected_screen_info == "info_icon_button")
-		{
-			screen_shader->info_screen_ptr->active = !screen_shader->info_screen_ptr->active;
-			screen_shader->option_icon_button_ptr->active = !screen_shader->info_screen_ptr->active;
-		}
-		if (selected_screen_info == "start_button")
-			start_button_down = true;
 	}
 	break;
 
@@ -626,6 +673,42 @@ bool Start_Scene::ProcessInput(UCHAR* pKeysBuffer)
 	return(false);
 }
 
+void Start_Scene::Check_Click_Button(string button_info)
+{
+	if (button_info == "start_button")
+		start_button_down = true;
+
+	if (button_info == "menu_icon_button")
+		screen_shader->pause_screen_ptr->active = !screen_shader->pause_screen_ptr->active;
+
+	if (button_info == "option_button" || button_info == "option_icon_button")
+	{
+		screen_shader->option_screen_ptr->active = true;
+		screen_shader->start_button_ptr->active = false;
+		screen_shader->option_icon_button_ptr->active = false;
+		screen_shader->info_icon_button_ptr->active = false;
+	}
+
+	if (button_info == "check_button" || button_info == "x_button")
+	{
+		screen_shader->option_screen_ptr->active = false;
+		screen_shader->option_icon_button_ptr->active = true;
+		screen_shader->info_icon_button_ptr->active = true;
+		screen_shader->start_button_ptr->active = true;
+	}
+
+	if (button_info == "info_icon_button")
+	{
+		screen_shader->info_screen_ptr->active = !screen_shader->info_screen_ptr->active;
+		screen_shader->option_icon_button_ptr->active = !screen_shader->info_screen_ptr->active;
+	}
+
+
+	CScene::Check_Click_Button(button_info);
+
+}
+
+
 void Start_Scene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) 
@@ -677,6 +760,45 @@ void Start_Scene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		screen_shader->Render(pd3dCommandList, pCamera);
 }
 
+void Start_Scene::Message_Render(ID2D1DeviceContext2* pd2dDevicecontext)
+{
+	if (screen_shader)
+	{
+		Screen_Rect** Text_Objects = (Screen_Rect**)screen_shader->screen_Objects;
+		int Obj_N = screen_shader->m_nObjects;
+
+		for (int i = 0; i < Obj_N; i++)
+		{
+			if (Text_Objects[i]->active == false)
+				continue;
+
+			Text_Objects[i]->Message_Render(pd2dDevicecontext, write_font_list[0], brush_list[0]);
+		}
+	}
+	
+
+
+	if (screen_shader->option_screen_ptr->active == true)
+	{
+		wstring text_player_speed = _T("Player speed");
+		wstring text_stone_speed = _T("Stone speed");
+		wstring text_difficulty = _T("Difficulty");
+		D2D1_RECT_F text_player_speed_area = { 200, 120, 600, 130 };
+		D2D1_RECT_F text_stone_speed_area = { 200, 240, 600, 250 };
+		D2D1_RECT_F text_difficulty_speed_area = { 200, 360, 600, 370 };
+		pd2dDevicecontext->DrawTextW(text_player_speed.c_str(), (UINT32)wcslen(text_player_speed.c_str()), write_font_list[1], &text_player_speed_area, brush_list[0]);
+		pd2dDevicecontext->DrawTextW(text_stone_speed.c_str(), (UINT32)wcslen(text_stone_speed.c_str()), write_font_list[1], &text_stone_speed_area, brush_list[0]);
+		pd2dDevicecontext->DrawTextW(text_difficulty.c_str(), (UINT32)wcslen(text_difficulty.c_str()), write_font_list[1], &text_difficulty_speed_area, brush_list[0]);
+	}
+
+}
+
+void Start_Scene::Reset()
+{
+	start_button_down = false;
+	scroll_value = 0;
+	m_pPlayer->SetPosition(XMFLOAT3(100.0f, 250.0f, 500.0f));
+}
 //=============================================================================================
 
 Game_Scene::Game_Scene()
@@ -749,7 +871,7 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 		float scale_value = 5.0f;
-		float height_scale = 0.3f;
+		float height_scale = 0.8f;
 
 		XMFLOAT3 xmf3Scale(scale_value, height_scale, scale_value);
 		XMFLOAT4 xmf4Color(1.0f, 1.0f, 0.5f, 1.0f);
@@ -769,14 +891,13 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	pObjectsShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	pObjectsShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL);
 
-	m_ppShaders[0] = pObjectsShader;
+	
 	
 	BOX_Shader* pBoxShader = new BOX_Shader();
 	pBoxShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	pBoxShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain);
 
 	box_shader = pBoxShader;
-	m_ppShaders[1] = pBoxShader;
 
 	//============================================================
 	
@@ -785,7 +906,6 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	pBlack_Hole_Shader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain);
 
 	black_hole_shader = pBlack_Hole_Shader;
-	m_ppShaders[2] = pBlack_Hole_Shader;
 
 	//============================================================
 
@@ -794,7 +914,6 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	pSprite_Billboard_Shader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain);
 
 	effect_shader = pSprite_Billboard_Shader;
-	m_ppShaders[3] = pSprite_Billboard_Shader;
 
 	//============================================================
 		
@@ -803,7 +922,6 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	diffuse_shader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL);
 
 	bullet_shader = diffuse_shader;
-	m_ppShaders[4] = diffuse_shader;
 
 	//============================================================
 	
@@ -818,11 +936,15 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	pAsteroidShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain);
 	pAsteroidShader->Set_Outline_Shader(outline_shader);
 
-
 	enemy_shader = pAsteroidShader;
 
 	//============================================================
-
+	m_ppShaders[0] = pObjectsShader;
+	m_ppShaders[1] = pBoxShader;
+	m_ppShaders[2] = pBlack_Hole_Shader;
+	m_ppShaders[3] = pSprite_Billboard_Shader;
+	m_ppShaders[4] = diffuse_shader;
+	//============================================================
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
@@ -913,20 +1035,9 @@ bool Game_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wPa
 
 		selected_screen_info = screen_shader->PickObjectPointedByCursor(screen_x, screen_y, NULL);
 		if (selected_screen_info != "")
+		{
 			DebugOutput(selected_screen_info);
-
-		if (selected_screen_info == "menu_icon_button")
-			screen_shader->pause_screen_ptr->active = !screen_shader->pause_screen_ptr->active;
-
-		if (selected_screen_info == "option_button" || selected_screen_info == "option_icon_button")
-		{
-			screen_shader->option_screen_ptr->active = !screen_shader->option_screen_ptr->active;
-			screen_shader->pause_screen_ptr->active = !screen_shader->option_screen_ptr->active;
-		}
-
-		if (selected_screen_info == "check_button" || selected_screen_info == "x_button")
-		{
-			screen_shader->option_screen_ptr->active = false;
+			Check_Click_Button(selected_screen_info);
 		}
 	}
 	break;
@@ -976,21 +1087,39 @@ bool Game_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		case '1':
 			CObjectsShader::Show_Collider = !CObjectsShader::Show_Collider;
 			if (CObjectsShader::Show_Collider)
+			{
 				CObjectsShader::Show_Attack_Collider = false;
+				CObjectsShader::Show_ETC_Collider = false;
+			}
 			break;
 
 		case '2':
 			CObjectsShader::Show_Attack_Collider = !CObjectsShader::Show_Attack_Collider;
 			if (CObjectsShader::Show_Attack_Collider)
+			{
 				CObjectsShader::Show_Collider = false;
+				CObjectsShader::Show_ETC_Collider = false;
+			}
 			break;
-
+		case '3':
+			CObjectsShader::Show_ETC_Collider = !CObjectsShader::Show_ETC_Collider;
+			if (CObjectsShader::Show_ETC_Collider)
+			{
+				CObjectsShader::Show_Attack_Collider = false;
+				CObjectsShader::Show_Collider = false;
+			}
 		case VK_SPACE:
 		{
+			bullet_shader->m_ppObjects[0]->active = true;
 			bullet_shader->m_ppObjects[0]->SetPosition(m_pPlayer->GetPosition());
 			bullet_shader->m_ppObjects[0]->SetMovingDirection(m_pPlayer->GetLookVector());
-			bullet_shader->m_ppObjects[0]->SetMovingSpeed(60.0f);
+			bullet_shader->m_ppObjects[0]->SetMovingSpeed(200.0f);
 		}
+		break;
+
+		case VK_TAB:
+			Pause_Mode = !Pause_Mode;
+			break;
 
 		default:
 			break;
@@ -1013,6 +1142,46 @@ bool Game_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 bool Game_Scene::ProcessInput(UCHAR* pKeysBuffer)
 {
 	return(false);
+}
+
+void  Game_Scene::Check_Click_Button(string button_info)
+{
+	
+	if (selected_screen_info == "menu_icon_button")
+	{
+		screen_shader->pause_screen_ptr->active = !screen_shader->pause_screen_ptr->active;
+		screen_shader->menu_button_ptr->active = false;
+		Pause_Mode = true;
+	}
+
+	if (selected_screen_info == "option_button" || selected_screen_info == "option_icon_button")
+	{
+		screen_shader->option_screen_ptr->active = !screen_shader->option_screen_ptr->active;
+		screen_shader->pause_screen_ptr->active = !screen_shader->option_screen_ptr->active;
+	}
+
+
+	if (button_info == "check_button" || button_info == "x_button")
+	{
+		screen_shader->option_screen_ptr->active = false;
+		screen_shader->pause_screen_ptr->active = true;
+	}
+
+	if (button_info == "continue_button")
+	{
+		screen_shader->pause_screen_ptr->active = false;
+		screen_shader->menu_button_ptr->active = true;
+		Pause_Mode = false;
+	}
+
+	if (button_info == "exit_button")
+	{
+		screen_shader->pause_screen_ptr->active = false;
+		screen_shader->menu_button_ptr->active = true;
+		Pause_Mode = false;
+		Reset_Signal = true;
+	}
+	CScene::Check_Click_Button(button_info);
 }
 
 void Game_Scene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -1054,11 +1223,12 @@ void Game_Scene::Scene_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 {
 	Collision_Defender(m_pPlayer, (CObjectsShader*)box_shader);
 	Check_Enemy_Collision();
-
+	Check_Bullet_Collision();
 	if (m_fElapsedTime > 5.0f)
 	{
 		m_fElapsedTime = 0.0f;
-		enemy_shader->Add_Object(pd3dDevice, pd3dCommandList, XMFLOAT3(m_pTerrain->GetWidth() / 4, 100.0f, m_pTerrain->GetLength() / 4));
+		for(int i = 0; i < DIFFICULTY_VALUE; ++i)
+			enemy_shader->Add_Object(pd3dDevice, pd3dCommandList, XMFLOAT3(m_pTerrain->GetWidth() / 2, 100.0f, m_pTerrain->GetLength() / 2));
 	}
 }
 void Game_Scene::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1111,23 +1281,107 @@ void Game_Scene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 
 
 	if (m_pPlayer)
+	{
 		m_pPlayer->Render(pd3dCommandList, m_pPlayer->GetCamera());
 
+		OOBB_Drawer* player_oobb_drawer = m_pPlayer->oobb_drawer;
+		player_oobb_drawer->oobb_shader->Render(pd3dCommandList, pCamera);
+		if (CObjectsShader::Show_Collider)
+		{
+			if (m_pPlayer->GetCollider())
+			{
+				player_oobb_drawer->Render(pd3dCommandList, pCamera);
+				player_oobb_drawer->UpdateOOBB_Data(pd3dCommandList, m_pPlayer, XMFLOAT4(0.0f,1.0f,0.0f,1.0f));
+				player_oobb_drawer->Render(pd3dCommandList, pCamera);
+			}
+		}
+		
+		if (CObjectsShader::Show_Attack_Collider)
+			if (m_pPlayer->Get_Light_Collider())
+			{
+				player_oobb_drawer->Render(pd3dCommandList, pCamera);
+				player_oobb_drawer->UpdateOOBB_Data(pd3dCommandList, &m_pPlayer->m_xmf4x4World, m_pPlayer->Get_Light_Collider(), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f));
+				player_oobb_drawer->Render(pd3dCommandList, pCamera);
+			}
 
+		if(CObjectsShader::Show_ETC_Collider)
+			if (m_pPlayer->Get_Navi_Collider())
+			{
+				player_oobb_drawer->Render(pd3dCommandList, pCamera);
+				player_oobb_drawer->UpdateOOBB_Data(pd3dCommandList, &m_pPlayer->m_xmf4x4World, m_pPlayer->Get_Navi_Collider(), XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f));
+				player_oobb_drawer->Render(pd3dCommandList, pCamera);
+			}
+	}
 	if (screen_shader)
 		screen_shader->Render(pd3dCommandList, pCamera);
 
 
 }
 
+void Game_Scene::Message_Render(ID2D1DeviceContext2* pd2dDevicecontext)
+{
+	if (screen_shader)
+	{
+		Screen_Rect** Text_Objects = (Screen_Rect**)screen_shader->screen_Objects;
+		int Obj_N = screen_shader->m_nObjects;
+
+		for (int i = 0; i < Obj_N; i++)
+		{
+			if (Text_Objects[i]->active == false)
+				continue;
+
+			Text_Objects[i]->Message_Render(pd2dDevicecontext, write_font_list[0], brush_list[0]);
+		}
+	}
+
+
+
+	if (screen_shader->option_screen_ptr->active == true)
+	{
+		wstring text_player_speed = _T("Player speed");
+		wstring text_stone_speed = _T("Stone speed");
+		wstring text_difficulty = _T("Difficulty");
+		D2D1_RECT_F text_player_speed_area = { 200, 120, 600, 130 };
+		D2D1_RECT_F text_stone_speed_area = { 200, 240, 600, 250 };
+		D2D1_RECT_F text_difficulty_speed_area = { 200, 360, 600, 370 };
+		pd2dDevicecontext->DrawTextW(text_player_speed.c_str(), (UINT32)wcslen(text_player_speed.c_str()), write_font_list[1], &text_player_speed_area, brush_list[0]);
+		pd2dDevicecontext->DrawTextW(text_stone_speed.c_str(), (UINT32)wcslen(text_stone_speed.c_str()), write_font_list[1], &text_stone_speed_area, brush_list[0]);
+		pd2dDevicecontext->DrawTextW(text_difficulty.c_str(), (UINT32)wcslen(text_difficulty.c_str()), write_font_list[1], &text_difficulty_speed_area, brush_list[0]);
+	}
+
+}
+
+
+void Game_Scene::Check_Bullet_Collision()
+{
+	XMFLOAT3 bullet_pos = { 0.0f,0.0f,0.0f };
+	if(bullet_shader->m_ppObjects[0]->active)
+		bullet_pos = bullet_shader->m_ppObjects[0]->GetPosition();
+
+	if (m_pTerrain)
+	{
+		float terrain_y = m_pTerrain->GetHeight(bullet_pos.x, bullet_pos.z);
+
+		if (abs(bullet_pos.y - terrain_y) < 1.0f)
+		{
+			black_hole_shader->m_ppObjects[1]->active = true;
+			bullet_shader->m_ppObjects[0]->active = false;
+
+			bullet_pos.y += 5.0f;
+			black_hole_shader->m_ppObjects[1]->SetPosition(bullet_pos);
+		}
+	}
+}
+
 void Game_Scene::Collision_Defender(CPlayer* player_ptr, CObjectsShader* object_shader)
 {
 	XMFLOAT3 now_speed = player_ptr->GetVelocity();
-	if (Vector3::Length(now_speed) < 1.0f)
-		return;
+	if (Vector3::Length(now_speed) < 0.5f)
+		return;  // 속도가 매우 느리면 충돌 검사 중단
 
-	BoundingOrientedBox player_OBB = BoundingOrientedBox(*player_ptr->GetCollider());
+	BoundingOrientedBox player_OBB = BoundingOrientedBox(*player_ptr->Get_Navi_Collider());
 	BoundingOrientedBox* obj_OBB = NULL;
+
 	for (int i = 0; i < object_shader->m_ppObjects.size(); ++i)
 	{
 		obj_OBB = object_shader->m_ppObjects[i]->GetCollider();
@@ -1135,15 +1389,13 @@ void Game_Scene::Collision_Defender(CPlayer* player_ptr, CObjectsShader* object_
 		{
 			XMFLOAT3 moving_vector = player_ptr->GetVelocity();
 			XMVECTOR direction_vector = XMLoadFloat3(&moving_vector);
-			direction_vector = XMVector3Normalize(direction_vector);
-
+			direction_vector = XMVector3Normalize(direction_vector); // 현재 이동 방향 정규화
 
 			// 광선의 시작점과 방향 설정
 			XMVECTOR rayOrigin = XMLoadFloat3(&player_ptr->GetPosition()); // 플레이어의 현재 위치
 			XMVECTOR rayDirection = direction_vector; // 정규화된 이동 방향
 
 
-			// 가까운 충돌 거리 변수
 			float f_distance = 0.0f;
 
 			// 광선과 obj_OBB 간의 충돌 검사
@@ -1162,42 +1414,54 @@ void Game_Scene::Collision_Defender(CPlayer* player_ptr, CObjectsShader* object_
 						XMVECTOR wallNormal = XMLoadFloat3(&polygon_normal_vector);
 						wallNormal = XMVector3Normalize(wallNormal); // 법선 벡터 정규화
 
-						// 충돌 지점 계산: rayOrigin + rayDirection * 충돌 거리
+						// 회피 지점 계산: 충돌 지점 + (법선 벡터 * 회피 거리)
+						float avoidDistance = 20.0f; // 회피할 거리 (필요시 조정)
 						XMVECTOR collisionPoint = rayOrigin + rayDirection * f_distance;
-
-						// 회피 거리 설정 (법선 방향으로 이동할 거리)
-						float avoidDistance = 10.0f; // 예시 값, 필요한 경우 조정
-
-						// 회피 지점(가상의 타겟) 계산: 충돌 지점 + (법선 벡터 * 회피 거리)
 						XMVECTOR avoidTarget = collisionPoint + (wallNormal * avoidDistance);
 
-						// 플레이어의 현재 위치 로드
+
 						XMVECTOR playerPosition = XMLoadFloat3(&player_ptr->GetPosition());
 
-						// 새로운 방향 벡터 계산: 플레이어 위치에서 회피 지점을 향한 방향
 						XMVECTOR newDirection = XMVector3Normalize(avoidTarget - playerPosition);
 
-						// 회피 지점으로 향하도록 이동 방향 설정 (Seek 알고리즘 적용)
+						XMVECTOR currentLook = XMLoadFloat3(&player_ptr->GetLook());
+
+						// 두 벡터 사이의 회전 방향 계산 (외적 사용)
+						XMVECTOR crossProduct = XMVector3Cross(currentLook, newDirection);
+						float crossY = XMVectorGetY(crossProduct); // Y축 회전 기준 (좌/우)
+						float crossX = XMVectorGetX(crossProduct); // X축 회전 기준 (상/하)
+
+						// 회전 적용 (상/하 또는 좌/우로 결정)
+						if (fabs(crossY) > 0.01f) // 좌/우 회전
+						{
+							float rotateAmountY = XMConvertToDegrees(crossY) * 0.1f; // 회전할 각도 조정
+							player_ptr->Rotate(0.0f, rotateAmountY, 0.0f); // Y축 회전 (좌/우)
+						}
+						else if (fabs(crossX) > 0.01f) // 상/하 회전
+						{
+							float rotateAmountX = XMConvertToDegrees(crossX) * 0.1f; // 회전할 각도 조정
+							player_ptr->Rotate(rotateAmountX, 0.0f, 0.0f); // X축 회전 (상/하)
+						}
+
+						// 회피 지점으로 향하는 방향으로 속도 설정
 						XMFLOAT3 player_new_velocity;
 						XMStoreFloat3(&player_new_velocity, newDirection);
 						player_ptr->SetVelocity(player_new_velocity);
 
-						//// 실제 이동 적용 (새로운 속도에 따라)
+						// 새롭게 계산된 속도에 따라 이동 적용
 						XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(player_new_velocity, Vector3::Length(now_speed), false);
 						player_ptr->Move(xmf3Velocity, true);
-
 					}
 				}
 			}
 		}
-
-
-	 }
+	}
 }
 
 void Game_Scene::Check_Enemy_Collision()
 {
 	BoundingOrientedBox* player_light_obb = m_pPlayer->Get_Light_Collider();
+	BoundingOrientedBox* player_body_obb = m_pPlayer->GetCollider();
 
 	for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects)
 	{
@@ -1208,6 +1472,9 @@ void Game_Scene::Check_Enemy_Collision()
 
 		for (CGameObject* box_ptr : box_shader->m_ppObjects)
 		{
+			if (box_ptr->is_render == false) // wall과는 충돌 무시
+				continue;
+
 			BoundingOrientedBox* box_obb = box_ptr->GetCollider();
 			if (asteroid_obb->Intersects(*box_obb))
 			{
@@ -1227,10 +1494,35 @@ void Game_Scene::Check_Enemy_Collision()
 				Add_Boom_Effect(asteroid_ptr->GetPosition());
 			}
 		}
+
+		if (asteroid_obb->Intersects(*player_body_obb))
+		{
+			asteroid_ptr->active = false;
+			Add_Boom_Effect(asteroid_ptr->GetPosition(), true);
+			break;
+		}
 	}
 }
+void Game_Scene::Check_Enemy_Black_Hole()
+{
+	Black_Hole_Object* Gravity_black_hole = black_hole_shader->Get_Player_Black_Hole();
+	BoundingOrientedBox* Gravity_black_hole_obb = Gravity_black_hole->Gravity_area;
 
-void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos)
+	for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects)
+	{
+		if (asteroid_ptr->active == false)
+			continue;
+
+		BoundingOrientedBox* asteroid_obb = asteroid_ptr->GetCollider();
+
+		if (Gravity_black_hole_obb->Intersects(*asteroid_obb))
+		{
+			// 점점 빨려 들어가기
+		}
+
+	}
+}
+void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos, bool color_change)
 {
 	bool Done = false; 
 	Sprite_Billboard_Shader* pshader = effect_shader;
@@ -1241,6 +1533,7 @@ void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos)
 		{
 			boom_billboard_obj->active = true;
 			((Billboard_Animation_Object*)boom_billboard_obj)->sprite_index = 0;
+			((Billboard_Animation_Object*)boom_billboard_obj)->blue_boom = color_change;
 			boom_billboard_obj->SetPosition(exlposion_pos);
 			Done = true;
 			break;
@@ -1248,7 +1541,18 @@ void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos)
 	}
 
 	if (Done == false)
+	{
 		pshader->Add_Object(exlposion_pos);
-
+		Billboard_Animation_Object* new_obj = (Billboard_Animation_Object*)pshader->m_ppObjects.back();
+		new_obj->blue_boom = color_change;
+	}
 	return;
+}
+
+void Game_Scene::Reset()
+{
+	m_pPlayer->SetPosition(XMFLOAT3(0.0f, 250.0f, 0.0f));
+	Show_Collider = false;
+	Pause_Mode = false;
+	Reset_Signal = false;
 }
