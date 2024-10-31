@@ -8,6 +8,7 @@ struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
 	float					m_fElapsedTime;
+	int Scene_Type;
 };
 
 class CGameFramework
@@ -87,7 +88,7 @@ private:
 
 	CScene						*rendering_scene = NULL;
 	Start_Scene					*start_scene = NULL;
-	bool Game_Start = false;
+
 	Game_Scene				*game_scene = NULL;
 	CPlayer						*m_pPlayer = NULL;
 	CCamera						*m_pCamera = NULL;
@@ -96,7 +97,8 @@ private:
 
 	_TCHAR						m_pszFrameRate[70];
 
-
+	bool Game_Start = false;
+	int Game_Scene_Type = 0;
 private:
 	// DX2DÀü¿ë
 #ifdef _WITH_DIRECT2D
@@ -113,6 +115,7 @@ private:
 	ID2D1SolidColorBrush* m_pd2dbrBackground = NULL;
 	ID2D1SolidColorBrush* m_pd2dbrBorder = NULL;
 	ID2D1SolidColorBrush* m_pd2dbrText = NULL;
+	ID2D1SolidColorBrush* m_pd2dbrScore_Text = NULL;
 
 	IDWriteTextFormat* m_pdw_Timer_Font = NULL;
 	IDWriteTextFormat* m_pdw_UI_Text_Font = NULL;

@@ -242,6 +242,7 @@ void CGameFramework::CreateDirect2DDevice()
 	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(0.3f, 0.0f, 0.0f, 0.5f), &m_pd2dbrBackground);
 	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF(0x9ACD32, 1.0f)), &m_pd2dbrBorder);
 	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f), &m_pd2dbrText);
+	m_pd2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White, 1.0f), &m_pd2dbrScore_Text);
 
 	hResult = m_pdWriteFactory->CreateTextFormat(L"¸¼Àº °íµñ", NULL, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 40.0f, L"ko-KR", &m_pdw_Timer_Font);
 	hResult = m_pdw_Timer_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
@@ -253,8 +254,8 @@ void CGameFramework::CreateDirect2DDevice()
 	hResult = m_pdw_UI_Text_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
 
-	hResult = m_pdWriteFactory->CreateTextFormat(L"¸¼Àº °íµñ", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 30.0f, L"ko-KR", &m_pdw_Score_Font);
-	hResult = m_pdw_Score_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	hResult = m_pdWriteFactory->CreateTextFormat(L"¸¼Àº °íµñ", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"ko-KR", &m_pdw_Score_Font);
+	hResult = m_pdw_Score_Font->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
 	hResult = m_pdw_Score_Font->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
 
@@ -401,11 +402,13 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	{
 		case WM_LBUTTONDOWN:
 		case WM_RBUTTONDOWN:
+			IS_MOUSE_DOWN = true;
 			::SetCapture(hWnd);
 			::GetCursorPos(&m_ptOldCursorPos);
 			break;
 		case WM_LBUTTONUP:
 		case WM_RBUTTONUP:
+			IS_MOUSE_DOWN = false;
 			::ReleaseCapture();
 			break;
 		case WM_MOUSEMOVE:
@@ -424,12 +427,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			{
 			case VK_TAB:
 				m_pPlayer->Rotate(0.0f, 6.6f, 0.0f);
-
 				break;
 
-				case VK_ESCAPE:
-					::PostQuitMessage(0);
-					break;
+
 				case VK_RETURN:
 					break;
 				case VK_F1:
@@ -438,7 +438,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
 					break;
 				case VK_F9:
-					ChangeSwapChainState();
+					//ChangeSwapChainState();
 					break;
 				case VK_F5:
 					break;
@@ -517,6 +517,7 @@ void CGameFramework::OnDestroy()
 	if (m_pdw_Timer_Font) m_pdw_Timer_Font->Release();
 	if (m_pdwTextLayout) m_pdwTextLayout->Release();
 	if (m_pd2dbrText) m_pd2dbrText->Release();
+	if (m_pd2dbrScore_Text) m_pd2dbrScore_Text->Release();
 
 	if (m_pd2dDeviceContext) m_pd2dDeviceContext->Release();
 	if (m_pd2dDevice) m_pd2dDevice->Release();
@@ -562,7 +563,9 @@ void CGameFramework::BuildObjects()
 		game_scene->Add_Font(m_pdw_UI_Text_Font);
 		game_scene->Add_Font(m_pdw_Timer_Font);
 		game_scene->Add_Font(m_pdw_Score_Font);
+
 		game_scene->Add_Brush(m_pd2dbrText);
+		game_scene->Add_Brush(m_pd2dbrScore_Text);
 	}
 
 	CAirplanePlayer* game_player = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, game_scene->GetGraphicsRootSignature(), game_scene->GetTerrain());
@@ -581,6 +584,7 @@ void CGameFramework::BuildObjects()
 	
 	rendering_scene = start_scene;
 	rendering_scene->screen_shader->Set_Start_Sceen_UI();
+	Game_Scene_Type = 0;
 
 	CreateShaderVariables();
 
@@ -618,7 +622,7 @@ void CGameFramework::UpdateShaderVariables()
 {
 	m_pcbMappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GetTotalTime();
 	m_pcbMappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
-
+	m_pcbMappedFrameworkInfo->Scene_Type = Game_Scene_Type;
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
 	m_pd3dCommandList->SetGraphicsRootConstantBufferView(7, d3dGpuVirtualAddress);
 }
@@ -650,10 +654,10 @@ void CGameFramework::ProcessInput()
 			dwDirection |= DIR_LEFT;      // ¹æÇâÅ° ¿ÞÂÊ ¶Ç´Â A
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
 			dwDirection |= DIR_RIGHT;     // ¹æÇâÅ° ¿À¸¥ÂÊ ¶Ç´Â D
-		if (pKeysBuffer[VK_PRIOR] & 0xF0)
-			dwDirection |= DIR_UP;        // Page Up
-		if (pKeysBuffer[VK_NEXT] & 0xF0)
-			dwDirection |= DIR_DOWN;      // Page Down
+		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
+			dwDirection |= DIR_UP;        // Page Up ¶Ç´Â Q
+		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
+			dwDirection |= DIR_DOWN;      // Page Down ¶Ç´Â E
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -671,11 +675,9 @@ void CGameFramework::ProcessInput()
 			if (cxDelta || cyDelta)
 			{
 				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-//				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-//					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
 			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 10.0f * PLAYER_SPEED_VALUE , true);
+				m_pPlayer->Move(dwDirection, 10.0f  , true);
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
@@ -718,7 +720,6 @@ void CGameFramework::MoveToNextFrame()
 	}
 }
 
-//#define _WITH_PLAYER_TOP
 
 void CGameFramework::FrameAdvance()
 {
@@ -736,6 +737,7 @@ void CGameFramework::FrameAdvance()
 			game_scene->Reset();
 			rendering_scene->screen_shader->Set_Start_Sceen_UI();
 			rendering_scene = start_scene;
+			Game_Scene_Type = 0;
 			m_pCamera = rendering_scene->m_pPlayer->ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
 		}
 	}
@@ -751,6 +753,7 @@ void CGameFramework::FrameAdvance()
 		start_scene->Set_Start_Signal(false);
 		rendering_scene->screen_shader->Set_Game_Sceen_UI();
 		rendering_scene = game_scene;
+		Game_Scene_Type = 1;
 		m_pCamera = rendering_scene->m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	}
 

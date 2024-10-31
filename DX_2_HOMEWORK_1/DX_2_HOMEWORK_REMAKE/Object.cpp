@@ -972,8 +972,18 @@ BoundingOrientedBox* CGameObject::GetCollider()
 	if (pOriginalBoundingBox == NULL)
 		return NULL;
 
+
+
 	BoundingOrientedBox* pWorldBoundingBox = new BoundingOrientedBox(*pOriginalBoundingBox);
 	pWorldBoundingBox->Center = GetPosition();
+
+	if (pWorldBoundingBox->Extents.x == 0)
+		pWorldBoundingBox->Extents.x = 1.0f;
+	else if (pWorldBoundingBox->Extents.y == 0)
+		pWorldBoundingBox->Extents.y = 1.0f;
+	else if (pWorldBoundingBox->Extents.z == 0)
+		pWorldBoundingBox->Extents.z = 1.0f;
+
 
 	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
 	XMStoreFloat4(&pWorldBoundingBox->Orientation, quaternionRotation);
@@ -1188,9 +1198,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	CTerrainShader* pTerrainShader = new CTerrainShader();
 	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	//UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
-	//D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle = CScene::CreateConstantBufferView(pd3dDevice, m_pd3dcbGameObject, ncbElementBytes);
-	//SetCbvGPUDescriptorHandle(d3dCbvGPUDescriptorHandle);
+
 
 	CMaterial* pTerrainMaterial = new CMaterial();
 	pTerrainMaterial->SetTexture(pTerrainTexture);
@@ -1249,7 +1257,7 @@ void Screen_Rect::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 	XMFLOAT4X4 matrix_temp = Matrix4x4::Identity();
 	matrix_temp._24 = scroll_value;
 	m_pcbMappedScreen_Rect_Info->transform_info = matrix_temp;
-
+	m_pcbMappedScreen_Rect_Info->right_scale_value = right_scale_move_value;
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbScreen_Rect_Info->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(8, d3dGpuVirtualAddress);
 }
@@ -1573,6 +1581,8 @@ Bullet_Object::Bullet_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	SetRotationSpeed(90.0f);
 	SetMovingSpeed(0.0f);
+	active_time = 0.0f;
+	active = false;
 }
 Bullet_Object::~Bullet_Object()
 {
@@ -1580,6 +1590,8 @@ Bullet_Object::~Bullet_Object()
 
 void Bullet_Object::Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent)
 {
+	if (active)
+		active_time += fTimeElapsed;
 	CRotatingObject::Animate(fTimeElapsed, pxmf4x4Parent);
 }
 
@@ -1613,7 +1625,8 @@ Black_Hole_Object::Black_Hole_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	oobb_drawer = new OOBB_Drawer();
 	oobb_drawer->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	Gravity_area = new BoundingOrientedBox(XMFLOAT3(0.0f,0.0f,0.0f), XMFLOAT3(100.0f,100.0f,100.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	Gravity_area = new BoundingOrientedBox(XMFLOAT3(0.0f,0.0f,0.0f), XMFLOAT3(300.0f,300.0f,300.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+
 }
 
 Black_Hole_Object::~Black_Hole_Object()
@@ -1635,7 +1648,20 @@ void Black_Hole_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
+BoundingOrientedBox* Black_Hole_Object::Get_Gravity_Collider()
+{
+	BoundingOrientedBox* pOriginalBoundingBox = Gravity_area;
+	if (pOriginalBoundingBox == NULL)
+		return NULL;
 
+	BoundingOrientedBox* pWorldBoundingBox = new BoundingOrientedBox(*pOriginalBoundingBox);
+	pWorldBoundingBox->Center = GetPosition();
+
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	XMStoreFloat4(&pWorldBoundingBox->Orientation, quaternionRotation);
+
+	return pWorldBoundingBox;
+}
 //==================================================
 
 Billboard_Animation_Object::Billboard_Animation_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)

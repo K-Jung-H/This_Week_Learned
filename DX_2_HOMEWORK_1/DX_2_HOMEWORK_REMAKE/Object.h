@@ -356,6 +356,7 @@ public:
 struct CB_Screen_Rect_INFO
 {
 	XMFLOAT4X4 transform_info;
+	float right_scale_value;
 };
 
 class Screen_Rect : public CGameObject
@@ -391,7 +392,7 @@ public:
 	
 	D3D12_RECT sissor_rect_screen_size;
 	float scroll_value = 0.0f;
-
+	float right_scale_move_value = 10.0f;
 
 protected:
 	ID3D12Resource* m_pd3dcbScreen_Rect_Info = NULL;
@@ -445,6 +446,9 @@ public:
 	float life = 100.0f;
 	float move_time = 0.0f;
 	XMFLOAT3 outline_color = { 1.0f, 0.0f, 0.0f };
+	CGameObject* target_obj = NULL;
+	bool In_Gravity = false;
+
 public:
 	Asteroid(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	virtual ~Asteroid();
@@ -456,12 +460,13 @@ public:
 	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
+	void SetTarget(CGameObject* target_ptr) { target_obj = target_ptr; }
 };
 
 class Bullet_Object : public CRotatingObject
 {
 public:
-	float move_time = 0.0f;
+	float active_time = 0.0f;
 
 public:
 	Bullet_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
@@ -502,6 +507,8 @@ public:
 	~Black_Hole_Object();
 	virtual void Animate(float fTimeElapsed, XMFLOAT4X4* pxmf4x4Parent);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+	BoundingOrientedBox* Get_Gravity_Collider();
 
 };
 

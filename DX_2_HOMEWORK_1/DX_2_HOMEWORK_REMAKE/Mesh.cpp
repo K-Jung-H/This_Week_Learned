@@ -598,13 +598,13 @@ Billboard_Mesh::Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_d3dAnimationVertexinfoBufferView.SizeInBytes = sizeof(UINT) * m_nVertices;
 
 	//==========================================================================
-	
-	float centerX = (left + right) / 2.0f;
-	float centerY = (top + bottom) / 2.0f;
 
 	float extentX = (right - left) / 2.0f;
-	float extentY = (bottom - top) / 2.0f;
+	float extentY = (top - bottom) / 2.0f;
 	float extentZ = (extentX + extentY) / 2.0f;
+
+	if (extentZ == 0.0f)
+		extentZ = 1.0f;
 
 	// 바운딩 박스 생성
 	mesh_bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(extentX, extentY, extentZ), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -627,6 +627,29 @@ void Billboard_Mesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool ani
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+
+void GenerateTangentsAndBitangents(XMFLOAT3* normals, XMFLOAT3* tangents, XMFLOAT3* bitangents, int vertexCount)
+{
+	for (int i = 0; i < vertexCount; i++)
+	{
+		XMVECTOR normal = XMLoadFloat3(&normals[i]);
+
+		// 임의의 벡터와 직교하는 탄젠트 벡터 생성
+		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		if (fabs(XMVectorGetX(XMVector3Dot(normal, up))) > 0.99f)
+		{
+			up = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); // 노멀 벡터가 Y축과 평행할 때 다른 축 사용
+		}
+
+		// 탄젠트와 바이탄젠트 벡터 생성
+		XMVECTOR tangent = XMVector3Normalize(XMVector3Cross(up, normal));
+		XMVECTOR bitangent = XMVector3Cross(normal, tangent);
+
+		// 결과를 배열에 저장
+		XMStoreFloat3(&tangents[i], tangent);
+		XMStoreFloat3(&bitangents[i], bitangent);
+	}
+}
 
 Textured_Cube_Mesh::Textured_Cube_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth, float fHeight, float fDepth) : CStandardMesh(pd3dDevice, pd3dCommandList)
 {
@@ -741,50 +764,7 @@ Textured_Cube_Mesh::Textured_Cube_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_pxmf3Tangents = new XMFLOAT3[m_nVertices];
 	m_pxmf3BiTangents = new XMFLOAT3[m_nVertices];
 
-	// 모든 정점의 탄젠트와 바이탄젠트를 초기화
-	for (int i = 0; i < m_nVertices; i++) {
-		m_pxmf3Tangents[i] = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		m_pxmf3BiTangents[i] = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	}
-
-	// 각 면의 탄젠트와 바이탄젠트 계산
-	for (int i = 0; i < m_nVertices; i += 4) {
-		XMFLOAT3 v0 = m_pxmf3Positions[i + 0];
-		XMFLOAT3 v1 = m_pxmf3Positions[i + 1];
-		XMFLOAT3 v2 = m_pxmf3Positions[i + 2];
-
-		// 삼각형 1: v0, v1, v2
-		XMFLOAT2 uv0 = m_pxmf2TextureCoords0[i + 0];
-		XMFLOAT2 uv1 = m_pxmf2TextureCoords0[i + 1];
-		XMFLOAT2 uv2 = m_pxmf2TextureCoords0[i + 2];
-
-		// v0 -> v1, v0 -> v2 벡터
-		XMFLOAT3 edge1 = XMFLOAT3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
-		XMFLOAT3 edge2 = XMFLOAT3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
-
-		// 텍스처 좌표 차이
-		XMFLOAT2 deltaUV1 = XMFLOAT2(uv1.x - uv0.x, uv1.y - uv0.y);
-		XMFLOAT2 deltaUV2 = XMFLOAT2(uv2.x - uv0.x, uv2.y - uv0.y);
-
-		// R = 1 / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x)
-		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-
-		// 탄젠트와 바이탄젠트 계산
-		XMFLOAT3 tangent, bitangent;
-		tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-		tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-		tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-
-		bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
-		bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
-		bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
-
-		// 정점에 탄젠트와 바이탄젠트 적용
-		for (int j = 0; j < 4; j++) {
-			m_pxmf3Tangents[i + j] = tangent;
-			m_pxmf3BiTangents[i + j] = bitangent;
-		}
-	}
+	GenerateTangentsAndBitangents(m_pxmf3Normals, m_pxmf3Tangents, m_pxmf3BiTangents, m_nVertices);
 
 	m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
 
@@ -799,7 +779,7 @@ Textured_Cube_Mesh::Textured_Cube_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
 	//====================================================
-// 서브메쉬의 개수는 1개만 사용하도록 설정
+	// 서브메쉬의 개수는 1개만 사용하도록 설정
 	m_nSubMeshes = 1;
 
 	// 서브메쉬 인덱스 개수 및 할당

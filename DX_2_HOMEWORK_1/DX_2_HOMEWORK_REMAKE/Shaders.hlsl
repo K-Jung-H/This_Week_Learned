@@ -24,6 +24,8 @@ cbuffer cbFrameworkInfo : register(b4)
 {
     float gfCurrentTime : packoffset(c0.x);
     float gfElapsedTime : packoffset(c0.y);
+    int Scene_Type : packoffset(c0.z); 
+    float padding : packoffset(c0.w); 
 };
 
 #include "Light.hlsl"
@@ -201,6 +203,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 cbuffer cbScreenInfo : register(b5)
 {
     matrix Screen_Transform: packoffset(c0);
+    float RightEdgeFactor : packoffset(c4); // 0~10 범위의 오른쪽 끝 비율
 };
 
 struct VS_SCREEN_TEXTURED_INPUT
@@ -219,10 +222,17 @@ VS_SCREEN_TEXTURED_OUTPUT VSTextureToScreen(VS_SCREEN_TEXTURED_INPUT input)
 {
     VS_SCREEN_TEXTURED_OUTPUT output;
 
-    output.position = mul(float4(input.position, 1.0f), Screen_Transform);
+    // RightEdgeFactor를 0~10 범위로 받아 -1.0 ~ 1.0로 매핑
+    float rightEdgeX = -1.0f + (RightEdgeFactor / 5.0f);
+
+    // x 좌표를 -1.0에서 rightEdgeX 범위로 변환
+    float adjustedX = lerp(-1.0f, rightEdgeX, (input.position.x + 1.0f) * 0.5f);
+    
+    output.position = mul(float4(adjustedX, input.position.y, input.position.z, 1.0f), Screen_Transform);
     output.uv = input.uv;
 	
-    return (output);
+    return output;
+    
 }
 
 float4 PSTextureToScreen(VS_SCREEN_TEXTURED_OUTPUT input) : SV_TARGET
@@ -243,9 +253,20 @@ float4 PSTextureToScreen(VS_SCREEN_TEXTURED_OUTPUT input) : SV_TARGET
     }
 
 	// 파도 효과
-    cColor.r += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f) * waveAmplitude; 
-    cColor.g += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 1.0f) * waveAmplitude; 
-    cColor.b += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 2.0f) * waveAmplitude; 
+    if (Scene_Type == 0)
+    {
+        cColor.r += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f) * waveAmplitude;
+        cColor.g += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 1.0f) * waveAmplitude;
+        cColor.b += sin(gfCurrentTime * waveFrequency + input.uv.y * 10.0f + 2.0f) * waveAmplitude;
+    }
+    else
+    {
+        cColor.r += sin(gfCurrentTime * waveFrequency + input.uv.x * 10.0f) * waveAmplitude;
+        cColor.g += sin(gfCurrentTime * waveFrequency + input.uv.x * 10.0f + 1.0f) * waveAmplitude;
+        cColor.b += sin(gfCurrentTime * waveFrequency + input.uv.x * 10.0f + 2.0f) * waveAmplitude;
+    }
+    
+
 
 	return (cColor);
 }

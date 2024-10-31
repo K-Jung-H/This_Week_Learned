@@ -102,7 +102,9 @@ public:
 	void Set_Game_Sceen_UI();
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
+	virtual void Bar_Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
 
+	
 	virtual void ReleaseUploadBuffers();
 
 	std::string PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera);
@@ -138,6 +140,9 @@ public:
 	Screen_Rect* option_difficulty_minus_button_ptr = NULL;
 	Screen_Rect* option_difficulty_plus_button_ptr = NULL;
 
+
+	Screen_Rect* Power_Bar_ptr = NULL;
+	Screen_Rect* Time_Bar_ptr = NULL;
 	int								m_nObjects = 0;
 };
 
@@ -168,6 +173,7 @@ public:
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
+
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 };
 
@@ -293,6 +299,7 @@ private:
 	CMaterial* pAsteroidMaterial = NULL;
 	CMaterial* outline_Material = NULL;
 	CMesh* asteroid_mesh = NULL;
+
 public:
 	Asteroid_Shader();
 	virtual ~Asteroid_Shader();
@@ -310,7 +317,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState = 0);
 
 	void Set_Target(CGameObject* obj_ptr) { target_obj = obj_ptr; };
-	void Add_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos);
+	void Add_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos, CGameObject* target_ptr);
 };
 
 class CBillboardObjectsShader : public CObjectsShader
@@ -348,6 +355,8 @@ public:
 	virtual ~Black_Hole_Shader();
 
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
+
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);

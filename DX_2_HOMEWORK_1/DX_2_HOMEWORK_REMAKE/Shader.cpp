@@ -407,15 +407,18 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	CTexture* x_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	CTexture* check_icon_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 
+	CTexture* Power_Bar_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* Time_Bar_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 
+	
 
 	main_screen_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/background_image.dds", RESOURCE_TEXTURE2D, 0);
 	start_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/play_button_red.dds", RESOURCE_TEXTURE2D, 0);
 	option_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/option_icon.dds", RESOURCE_TEXTURE2D, 0);
 	
 	info_icon_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/info_icon_button.dds", RESOURCE_TEXTURE2D, 0);
-	play_info_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Play_Info.dds", RESOURCE_TEXTURE2D, 0);
-
+	play_info_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/how_to_play.dds", RESOURCE_TEXTURE2D, 0); // Play_Info
+	
 	menu_button_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/menu_button_red.dds", RESOURCE_TEXTURE2D, 0);
 
 	pause_menu_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/menu_background_red.dds", RESOURCE_TEXTURE2D, 0);
@@ -430,7 +433,10 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	check_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/check_button.dds", RESOURCE_TEXTURE2D, 0);
 	x_icon_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/x_button.dds", RESOURCE_TEXTURE2D, 0);
 
+	Power_Bar_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Power_Bar.dds", RESOURCE_TEXTURE2D, 0);
+	Time_Bar_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"texture/Time_Bar.dds", RESOURCE_TEXTURE2D, 0);
 
+	
 	//================================================================================
 	const char* main_screen_txt = "main_screen";
 
@@ -479,7 +485,13 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		//================================================================================
 		const char* play_info_txt = "play_info";
 
-		play_info_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, play_info_texture, XMFLOAT2(-0.75f, 0.7f), XMFLOAT2(0.75f, -0.7f), 8);
+		play_info_ptr = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, play_info_texture, XMFLOAT2(-0.75f, 1.5f), XMFLOAT2(0.75f, -1.5f), 8);
+
+		play_info_ptr->sissor_rect_screen_size.left = static_cast<UINT>((-0.75f + 1.0f) * 0.5f * FRAME_BUFFER_WIDTH);
+		play_info_ptr->sissor_rect_screen_size.top = static_cast<UINT>((1.0f - 0.7f) * 0.5f * FRAME_BUFFER_HEIGHT);
+		play_info_ptr->sissor_rect_screen_size.right = static_cast<UINT>((0.75f + 1.0f) * 0.5f * FRAME_BUFFER_WIDTH);
+		play_info_ptr->sissor_rect_screen_size.bottom = static_cast<UINT>((1.0f - (-0.7f)) * 0.5f * FRAME_BUFFER_HEIGHT);
+
 
 		std::copy(play_info_txt, play_info_txt + std::strlen(play_info_txt) + 1, play_info_ptr->m_pstrFrameName);
 
@@ -670,6 +682,20 @@ void ScreenShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	std::copy(check_button_txt, check_button_txt + std::strlen(check_button_txt) + 1, check_button->m_pstrFrameName);
 
 	option_menu_box_ptr->SetChild(check_button);
+	//================================================================================
+	const char* Power_Bar_txt = "Power_Bar_Rect";
+
+	Screen_Rect* Power_Bar = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, Power_Bar_texture, XMFLOAT2(-1.0f, -0.9f), XMFLOAT2(1.0f, -1.0f), 1);
+	Power_Bar->right_scale_move_value = 0.0f;
+	std::copy(Power_Bar_txt, Power_Bar_txt + std::strlen(Power_Bar_txt) + 1, Power_Bar->m_pstrFrameName);
+	Power_Bar_ptr = Power_Bar;
+
+	const char* Time_Bar_txt = "Time_Bar_Rect";
+	Screen_Rect* Time_Bar = new Screen_Rect(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, this, Time_Bar_texture, XMFLOAT2(-1.0f, -0.8f), XMFLOAT2(1.0f, -1.0f), 1);
+	Time_Bar->right_scale_move_value = 10.0f;
+	std::copy(Time_Bar_txt, Time_Bar_txt + std::strlen(Time_Bar_txt) + 1, Time_Bar->m_pstrFrameName);
+	Time_Bar_ptr = Time_Bar;
+	//================================================================================
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -709,11 +735,11 @@ bool ScreenShader::Scroll_Update(float fTimeElapsed, float value)
 		{
 			currentScrollValue += (value - sr_ptr->scroll_value) * t;
 			sr_ptr->scroll_value = currentScrollValue;
-			sr_ptr->scroll_value = std::clamp(sr_ptr->scroll_value, -0.4f, 0.4f);
+			sr_ptr->scroll_value = std::clamp(sr_ptr->scroll_value, -1.2f, 1.2f);
 
 			sr_ptr->sissor_rect_clip = true; // 시저렉트 적용할 객체들
 
-			if (abs(sr_ptr->scroll_value) == 0.4f)
+			if (abs(sr_ptr->scroll_value) == 1.2f)
 				return false;
 		}
 	return true;
@@ -752,6 +778,15 @@ void ScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	}
 }
 
+void ScreenShader::Bar_Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int nPipelineState)
+{
+	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
+	if (Power_Bar_ptr->right_scale_move_value > 0.0f)
+		Power_Bar_ptr->Render(pd3dCommandList, pCamera);
+
+	if (Time_Bar_ptr->right_scale_move_value > 0.0f)
+		Time_Bar_ptr->Render(pd3dCommandList, pCamera);
+}
 
 std::string ScreenShader::PickObjectPointedByCursor(float xClient, float yClient, CCamera* pCamera)
 {
@@ -894,6 +929,8 @@ D3D12_SHADER_BYTECODE CTerrainShader::CreatePixelShader()
 {
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTerrain", "ps_5_1", &m_pd3dPixelShaderBlob));
 }
+
+
 
 void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
@@ -1434,73 +1471,88 @@ void Asteroid_Shader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
 {
-	XMFLOAT3 Target_pos = target_obj->GetPosition();
 
 	for (CGameObject* obj_ptr : m_ppObjects)
 	{
-		XMFLOAT3 obj_pos = obj_ptr->GetPosition();
-
-		float dx = Target_pos.x - obj_pos.x;
-		float dy = Target_pos.y - obj_pos.y;
-		float dz = Target_pos.z - obj_pos.z;
-		float distance = sqrt(dx * dx + dy * dy + dz * dz);
+		if (obj_ptr->active == false)
+			continue;
 
 		Asteroid* obj_info = (Asteroid*)obj_ptr;
+		XMFLOAT3 Target_pos = obj_info->target_obj->GetPosition();
+		XMFLOAT3 obj_pos = obj_ptr->GetPosition();
 
-		int cool_down = 5.0f;
-		if (distance > 100.0f)
-			cool_down = 1.0f;
-		else
-			cool_down = 0.2f;
-
-		if (obj_info->move_time < cool_down)
+		if (obj_info->In_Gravity)
 		{
-			obj_info->move_time += fTimeElapsed;
-			continue;
+			XMFLOAT3 newDirection = { 0.0f,0.0f,0.0f };
+			XMStoreFloat3(&newDirection, XMVector3Normalize(XMVectorSubtract(XMLoadFloat3(&Target_pos), XMLoadFloat3(&obj_pos))));
+
+			obj_ptr->SetMovingDirection(newDirection);
 		}
 		else
-			obj_info->move_time = 0.0f;
-
-
-		// 방향 벡터 초기화
-		XMFLOAT3 direction = { 0.0f, 0.0f, 0.0f };
-
-		if (distance >= 50.0f)
 		{
-			// 무작위로 x, y, z 축 중 하나 선택
-			int randomAxis = rand() % 3; // 0: x, 1: y, 2: z
+			// 목표까지의 거리와 좌표 차이 계산
+			float dx = Target_pos.x - obj_pos.x;
+			float dy = Target_pos.y - obj_pos.y;
+			float dz = Target_pos.z - obj_pos.z;
+			float distance = sqrt(dx * dx + dy * dy + dz * dz);
 
-			if (randomAxis == 0 && (abs(dx) > 5.0f)) // x축 선택
-				direction.x = (dx > 0) ? 1.0f : -1.0f; // 타겟 방향에 따라 설정
-			else if (randomAxis == 1 && (abs(dy) > 5.0f)) // y축 선택
-				direction.y = (dy > 0) ? 1.0f : -1.0f; // 타겟 방향에 따라 설정
-			else if (randomAxis == 2 && (abs(dz) > 5.0f)) // z축 선택
-				direction.z = (dz > 0) ? 1.0f : -1.0f; // 타겟 방향에 따라 설정
-
-		}
-		if (direction.x == 0.0f && direction.y == 0.0f && direction.z == 0.0f)
-		{
-			float abs_diff[3] = { fabs(dx), fabs(dy), fabs(dz) };
-			int max_index = std::distance(abs_diff, std::max_element(abs_diff, abs_diff + 3));
-
-			if (max_index == 0)
-				direction.x = (dx > 0) ? 1.0f : -1.0f;
-
-			else if (max_index == 1)
-				direction.y = (dy > 0) ? 1.0f : -1.0f;
+			// `cool_down` 값 조정
+			float cool_down = (distance > 500.0f) ? 3.0f : 1.0f;
+			if (obj_info->move_time < cool_down)
+			{
+				obj_info->move_time += fTimeElapsed;
+			}
 			else
-				direction.z = (dz > 0) ? 1.0f : -1.0f;
-		}
+			{
+				obj_info->move_time = 0.0f;
 
-		if (distance > 1.0f)
-		{
-			obj_ptr->SetMovingDirection(direction);
-			obj_ptr->SetMovingSpeed(distance * STONE_SPEED_VALUE);
-		}
-		else
-		{
-			obj_ptr->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
-			obj_ptr->SetMovingSpeed(0.0f);
+				// 방향과 속도 설정
+				XMFLOAT3 direction = { 0.0f, 0.0f, 0.0f };
+				float speed = 0.0f;
+
+				if (distance > 500.0f)
+				{
+					// 무작위 축 선택
+					int randomAxis = rand() % 3; // 0: x, 1: y, 2: z
+					if (randomAxis == 0 && (fabs(dx) > 5.0f)) // X축 선택
+						direction.x = (dx > 0) ? 1.0f : -1.0f;
+					else if (randomAxis == 1 && (fabs(dy) > 5.0f)) // Y축 선택
+						direction.y = (dy > 0) ? 1.0f : -1.0f;
+					else if (randomAxis == 2 && (fabs(dz) > 5.0f)) // Z축 선택
+						direction.z = (dz > 0) ? 1.0f : -1.0f;
+
+					// 속도를 100으로 설정
+					speed = 200.0f;
+
+					obj_ptr->SetMovingDirection(direction);
+					obj_ptr->SetMovingSpeed(speed);
+
+				}
+				else if (distance > 1.0f) // 거리 50 이하일 때 방향 합산 및 속도 설정
+				{
+					direction.x = (dx > 0) ? 1.0f : -1.0f;
+					direction.y = (dy > 0) ? 1.0f : -1.0f;
+					direction.z = (dz > 0) ? 1.0f : -1.0f;
+
+					// 방향 벡터 정규화
+					XMVECTOR dirVector = XMLoadFloat3(&direction);
+					dirVector = XMVector3Normalize(dirVector);
+					XMStoreFloat3(&direction, dirVector);
+
+					// 속도를 30으로 설정
+					speed = 100.0f;
+
+					obj_ptr->SetMovingDirection(direction);
+					obj_ptr->SetMovingSpeed(speed);
+
+				}
+
+				if (distance < 1.0f)
+				{
+					obj_ptr->SetMovingDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
+					obj_ptr->SetMovingSpeed(0.0f);
+				}
+			}
 		}
 	}
 
@@ -1514,7 +1566,7 @@ void Asteroid_Shader::AnimateObjects(float fTimeElapsed)
 		{
 			pos.y = fHeight;
 			obj_ptr->SetPosition(pos);
-			((Asteroid*)obj_ptr)->move_time = 10.0f;
+			((Asteroid*)obj_ptr)->move_time += 1.0f;
 		}
 	}
 
@@ -1528,30 +1580,52 @@ void Asteroid_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera
 	CShader::Render(pd3dCommandList, pCamera, nPipelineState);
 }
 
-void Asteroid_Shader::Add_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos)
+void Asteroid_Shader::Add_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos, CGameObject* target_ptr)
 {
-	// 기존 객체 리스트에 사용 안하는 객체가 있다면
+	// 죽어있는 객체의 수를 세기 위한 변수
+	int inactiveCount = std::count_if(m_ppObjects.begin(), m_ppObjects.end(), [](CGameObject* obj_ptr) {
+		return obj_ptr->active == false;
+		});
+
+	// 죽어있는 객체의 수가 10개 이상인 경우
+	if (inactiveCount >= 10) {
+		// 죽어있는 객체를 삭제하고 살아있는 객체를 새로운 벡터로 복사
+		m_ppObjects.erase(std::remove_if(m_ppObjects.begin(), m_ppObjects.end(), [](CGameObject* obj_ptr) {
+			if (obj_ptr->active == false) {
+				delete obj_ptr; // 죽어있는 객체 메모리 해제
+				return true;    // 이 객체를 제거
+			}
+			return false; // 살아있는 객체는 유지
+			}), m_ppObjects.end());
+	}
+
+	// 재활용 또는 새로운 객체 추가
 	for (CGameObject* obj_ptr : m_ppObjects)
 	{
 		if (obj_ptr->active == false)
 		{
 			obj_ptr->SetPosition(pos);
 			((Asteroid*)obj_ptr)->life = 100;
+			((Asteroid*)obj_ptr)->SetTarget(target_ptr);
+			((Asteroid*)obj_ptr)->In_Gravity = false;
 			obj_ptr->active = true;
-			return;
+			return; // 재활용한 객체가 있으므로 함수 종료
 		}
 	}
 
-	// 모든 객체가 다 살아있어서 공간이 없다면
+	if (m_ppObjects.size() >= 60)
+		return;
+
+	// 모든 객체가 다 살아있어서 공간이 없다면 새로운 객체 생성
 	CGameObject* asteroid_ptr = new Asteroid(pd3dDevice, pd3dCommandList, NULL);
 
 	asteroid_ptr->SetMaterial(0, outline_Material);
 	asteroid_ptr->SetMaterial(1, pAsteroidMaterial);
 	asteroid_ptr->SetMesh(asteroid_mesh);
 	asteroid_ptr->SetPosition(pos);
+	((Asteroid*)asteroid_ptr)->SetTarget(target_ptr);
 
 	m_ppObjects.push_back(asteroid_ptr);
-
 }
 
 CBillboardObjectsShader::CBillboardObjectsShader()
@@ -1703,6 +1777,28 @@ Black_Hole_Shader::~Black_Hole_Shader()
 D3D12_SHADER_BYTECODE Black_Hole_Shader::CreatePixelShader()
 {
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard_Black_Hole", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+D3D12_DEPTH_STENCIL_DESC Black_Hole_Shader::CreateDepthStencilState()
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = FALSE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
 }
 
 void Black_Hole_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)

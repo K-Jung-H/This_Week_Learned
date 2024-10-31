@@ -15,6 +15,8 @@ float PLAYER_SPEED_VALUE = 1.0f;
 float STONE_SPEED_VALUE = 1.0f;
 int DIFFICULTY_VALUE = 1;
 
+bool IS_MOUSE_DOWN = false;
+
 void DebugOutput(const std::string& message) {
 	std::wstring wMessage(message.begin(), message.end());
 	OutputDebugString((wMessage + L"\n").c_str());

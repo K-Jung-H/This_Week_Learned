@@ -100,6 +100,8 @@ public:
 	CHeightMapTerrain* GetTerrain() { return(m_pTerrain); }
 	CPlayer								*m_pPlayer = NULL;
 	float m_fElapsedTime = 0.0f;
+
+
 public:
 	ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
 
@@ -186,6 +188,11 @@ class Black_Hole_Shader;
 class Sprite_Billboard_Shader;
 class Diffuse_Shader;
 
+struct CollisionInfo {
+	CGameObject* collided_obj_A;
+	CGameObject* collided_obj_B;
+};
+
 class Game_Scene : public CScene
 {
 protected:
@@ -202,6 +209,17 @@ protected:
 	bool Show_Collider = false;
 	bool Pause_Mode = false;
 	bool Reset_Signal = false;
+
+	unsigned int game_score = 0;
+	float to_be_point = 0.0f;
+	float now_point = 0.0f;
+
+	float gravity_hole_runtime = 0.0f;
+	float to_be_time = 0.0f;
+	float now_time = 0.0f;
+
+
+	float time_to_score = 0.0f;
 
 public:
 	BOX_Shader* box_shader = NULL;
@@ -243,8 +261,12 @@ public:
 
 	void Add_Boom_Effect(XMFLOAT3 exlposion_pos, bool color_change = false);
 
+	void Update_Power_Bar(float add_point = 0.0f);
+	void Update_Time_Bar(float add_point = 0.0f);
+
 	void Collision_Defender(CPlayer* player_ptr, CObjectsShader* pshader);
 	void Check_Enemy_Collision();
 	void Check_Enemy_Black_Hole();
+	void Check_Enemy_Overlap();
 	void Check_Bullet_Collision();
 };

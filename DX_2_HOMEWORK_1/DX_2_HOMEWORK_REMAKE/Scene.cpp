@@ -615,7 +615,6 @@ bool Start_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
-		::ReleaseCapture();
 		selected_screen_info = "";
 		break;
 
@@ -626,11 +625,11 @@ bool Start_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 
 		if (delta > 0)// 위로 스크롤
 		{
-			scroll_value += 0.1f;
+			scroll_value -= 0.1f;
 		}
 		else if (delta < 0)// 아래로 스크롤
 		{
-			scroll_value -= 0.1f;
+			scroll_value += 0.1f;
 		}
 		
 	}
@@ -652,13 +651,8 @@ bool Start_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case 'W': m_ppGameObjects[0]->MoveForward(+1.0f); break;
-		case 'S': m_ppGameObjects[0]->MoveForward(-1.0f); break;
-		case 'A': m_ppGameObjects[0]->MoveStrafe(-1.0f); break;
-		case 'D': m_ppGameObjects[0]->MoveStrafe(+1.0f); break;
-		case 'Q': m_ppGameObjects[0]->MoveUp(+1.0f); break;
-		case 'R': m_ppGameObjects[0]->MoveUp(-1.0f); break;
-		default:
+		case VK_ESCAPE:
+			::PostQuitMessage(0);
 			break;
 		}
 		break;
@@ -701,6 +695,11 @@ void Start_Scene::Check_Click_Button(string button_info)
 	{
 		screen_shader->info_screen_ptr->active = !screen_shader->info_screen_ptr->active;
 		screen_shader->option_icon_button_ptr->active = !screen_shader->info_screen_ptr->active;
+		if (screen_shader->info_screen_ptr->active)
+		{
+			scroll_value = -1.0f;
+			screen_shader->info_screen_ptr->scroll_value = -1.0f;
+		}
 	}
 
 
@@ -871,12 +870,11 @@ void Game_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 		float scale_value = 5.0f;
-		float height_scale = 0.8f;
+		float height_scale = 5.0f;
 
 		XMFLOAT3 xmf3Scale(scale_value, height_scale, scale_value);
 		XMFLOAT4 xmf4Color(1.0f, 1.0f, 0.5f, 1.0f);
-
-		m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Hight_Map/HeightMap.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
+		m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Hight_Map/handmade_moon_surface.raw"), 513, 513, 513, 513, xmf3Scale, xmf4Color);
 	}
 
 
@@ -1044,28 +1042,9 @@ bool Game_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wPa
 
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
-		::ReleaseCapture();
+
 		selected_screen_info = "";
 		break;
-
-	case WM_MOUSEWHEEL:
-	{
-		// wParam에서 스크롤 방향 및 휠 회전 값을 추출
-		short delta = GET_WHEEL_DELTA_WPARAM(wParam);
-
-		// delta 값이 양수이면 위로 스크롤, 음수이면 아래로 스크롤
-		if (delta > 0)
-		{
-			// 위로 스크롤
-			OutputDebugString(L"Mouse wheel scrolled up.\n");
-		}
-		else if (delta < 0)
-		{
-			// 아래로 스크롤
-			OutputDebugString(L"Mouse wheel scrolled down.\n");
-		}
-	}
-	break;
 
 	case WM_MOUSEMOVE:
 		break;
@@ -1108,17 +1087,51 @@ bool Game_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 				CObjectsShader::Show_Attack_Collider = false;
 				CObjectsShader::Show_Collider = false;
 			}
+			break;
+
 		case VK_SPACE:
-		{
-			bullet_shader->m_ppObjects[0]->active = true;
-			bullet_shader->m_ppObjects[0]->SetPosition(m_pPlayer->GetPosition());
-			bullet_shader->m_ppObjects[0]->SetMovingDirection(m_pPlayer->GetLookVector());
-			bullet_shader->m_ppObjects[0]->SetMovingSpeed(200.0f);
-		}
-		break;
+			if (m_pPlayer->skill_charged && m_pPlayer->skill_cool_down)
+			{
+				if (bullet_shader->m_ppObjects[0]->active == false)
+				{
+					bullet_shader->m_ppObjects[0]->active = true;
+					bullet_shader->m_ppObjects[0]->SetPosition(m_pPlayer->GetPosition());
+					bullet_shader->m_ppObjects[0]->SetMovingDirection(m_pPlayer->GetLookVector());
+					bullet_shader->m_ppObjects[0]->SetMovingSpeed(300.0f);
+					Update_Power_Bar(-100.0f);
+				}
+			}
+			break;
+
+		case 'z':
+		case 'Z':
+			Update_Power_Bar(10.0f);
+			break;
+
+		case 'x':
+		case 'X':
+			Update_Time_Bar(10.0f);
+			break;
+
+		case 'c':
+		case 'C':
+			Update_Time_Bar(-10.0f);
+			break;
+
+		case VK_OEM_PLUS:
+			m_pPlayer->Life += 1;
+			break;
+
+		case VK_OEM_MINUS:
+			m_pPlayer->Life -= 1;
+			break;
 
 		case VK_TAB:
 			Pause_Mode = !Pause_Mode;
+			break;
+
+		case VK_ESCAPE:
+			Check_Click_Button("menu_icon_button");
 			break;
 
 		default:
@@ -1147,14 +1160,14 @@ bool Game_Scene::ProcessInput(UCHAR* pKeysBuffer)
 void  Game_Scene::Check_Click_Button(string button_info)
 {
 	
-	if (selected_screen_info == "menu_icon_button")
+	if (button_info == "menu_icon_button")
 	{
 		screen_shader->pause_screen_ptr->active = !screen_shader->pause_screen_ptr->active;
 		screen_shader->menu_button_ptr->active = false;
 		Pause_Mode = true;
 	}
 
-	if (selected_screen_info == "option_button" || selected_screen_info == "option_icon_button")
+	if (button_info == "option_button" || button_info == "option_icon_button")
 	{
 		screen_shader->option_screen_ptr->active = !screen_shader->option_screen_ptr->active;
 		screen_shader->pause_screen_ptr->active = !screen_shader->option_screen_ptr->active;
@@ -1187,9 +1200,14 @@ void  Game_Scene::Check_Click_Button(string button_info)
 void Game_Scene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	m_fElapsedTime += fTimeElapsed;
-	if (m_pPlayer)
+	time_to_score += fTimeElapsed;
+
+	if (time_to_score > 1.0f)
 	{
-		enemy_shader->Set_Target(m_pPlayer);
+		time_to_score = 0.0f;
+		game_score += 10 * DIFFICULTY_VALUE;
+		if (black_hole_shader->Get_Player_Black_Hole()->active == false)
+			Update_Power_Bar(1.0f);
 	}
 
 	for (int i = 0; i < m_nGameObjects; i++)
@@ -1216,6 +1234,16 @@ void Game_Scene::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
+	if (black_hole_shader->Get_Player_Black_Hole()->active)
+	{
+		gravity_hole_runtime += fTimeElapsed;
+		if (gravity_hole_runtime >= 1.0f)
+		{
+			gravity_hole_runtime = 0.0f;
+			Update_Time_Bar(-10.0f);
+		}
+	}
+
 	Scene_Update(pd3dDevice, pd3dCommandList);
 }
 
@@ -1223,14 +1251,25 @@ void Game_Scene::Scene_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 {
 	Collision_Defender(m_pPlayer, (CObjectsShader*)box_shader);
 	Check_Enemy_Collision();
+	Check_Enemy_Black_Hole();
+	Check_Enemy_Overlap();
 	Check_Bullet_Collision();
-	if (m_fElapsedTime > 5.0f)
+	Update_Power_Bar();
+	Update_Time_Bar();
+
+	if (m_pPlayer->Life <= 0)
+	{
+		Reset_Signal = true;
+	}
+
+	if (m_fElapsedTime > 3.0f)
 	{
 		m_fElapsedTime = 0.0f;
 		for(int i = 0; i < DIFFICULTY_VALUE; ++i)
-			enemy_shader->Add_Object(pd3dDevice, pd3dCommandList, XMFLOAT3(m_pTerrain->GetWidth() / 2, 100.0f, m_pTerrain->GetLength() / 2));
+			enemy_shader->Add_Object(pd3dDevice, pd3dCommandList, XMFLOAT3(m_pTerrain->GetWidth() / 2, 100.0f, m_pTerrain->GetLength() / 2), m_pPlayer);
 	}
 }
+
 void Game_Scene::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_pd3dGraphicsRootSignature)
@@ -1279,6 +1318,9 @@ void Game_Scene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 		if (m_ppShaders[i]) 
 			m_ppShaders[i]->Render(pd3dCommandList, pCamera);
 
+
+	// 블랙홀 충전량, 블랙홀 유지 시간 UI
+	screen_shader->Bar_Render(pd3dCommandList, pCamera);
 
 	if (m_pPlayer)
 	{
@@ -1332,44 +1374,99 @@ void Game_Scene::Message_Render(ID2D1DeviceContext2* pd2dDevicecontext)
 
 			Text_Objects[i]->Message_Render(pd2dDevicecontext, write_font_list[0], brush_list[0]);
 		}
+
+		if (screen_shader->option_screen_ptr->active == true)
+		{
+			wstring text_player_speed = _T("Player speed");
+			wstring text_stone_speed = _T("Stone speed");
+			wstring text_difficulty = _T("Difficulty");
+			D2D1_RECT_F text_player_speed_area = { 200, 120, 600, 130 };
+			D2D1_RECT_F text_stone_speed_area = { 200, 240, 600, 250 };
+			D2D1_RECT_F text_difficulty_speed_area = { 200, 360, 600, 370 };
+			pd2dDevicecontext->DrawTextW(text_player_speed.c_str(), (UINT32)wcslen(text_player_speed.c_str()), write_font_list[1], &text_player_speed_area, brush_list[0]);
+			pd2dDevicecontext->DrawTextW(text_stone_speed.c_str(), (UINT32)wcslen(text_stone_speed.c_str()), write_font_list[1], &text_stone_speed_area, brush_list[0]);
+			pd2dDevicecontext->DrawTextW(text_difficulty.c_str(), (UINT32)wcslen(text_difficulty.c_str()), write_font_list[1], &text_difficulty_speed_area, brush_list[0]);
+		}
+		else if(screen_shader->pause_screen_ptr->active == false)
+		{
+			// 게임 화면인 경우
+
+			wstring text_HP = _T("HP: ") + std::to_wstring(m_pPlayer->Life);
+			wstring text_Black_Hole = _T("Skill Status: "); 
+			if (m_pPlayer->skill_charged)
+				text_Black_Hole += _T("Charged");
+			else
+				text_Black_Hole += _T("Not Prepared");
+
+			wstring text_Score = _T("Score: ") + std::to_wstring(game_score);
+			D2D1_RECT_F text_HP_area = { 0, 0, 300, 30 };
+			D2D1_RECT_F text_Black_Hole_area = { 0, 30, 300, 60 };
+			D2D1_RECT_F text_Score_area = { 0, 60, 300, 90 };
+			pd2dDevicecontext->DrawTextW(text_HP.c_str(), (UINT32)wcslen(text_HP.c_str()), write_font_list[2], &text_HP_area, brush_list[1]);
+			pd2dDevicecontext->DrawTextW(text_Black_Hole.c_str(), (UINT32)wcslen(text_Black_Hole.c_str()), write_font_list[2], &text_Black_Hole_area, brush_list[1]);
+			pd2dDevicecontext->DrawTextW(text_Score.c_str(), (UINT32)wcslen(text_Score.c_str()), write_font_list[2], &text_Score_area, brush_list[1]);
+
+
+			return;
+		}
 	}
-
-
-
-	if (screen_shader->option_screen_ptr->active == true)
-	{
-		wstring text_player_speed = _T("Player speed");
-		wstring text_stone_speed = _T("Stone speed");
-		wstring text_difficulty = _T("Difficulty");
-		D2D1_RECT_F text_player_speed_area = { 200, 120, 600, 130 };
-		D2D1_RECT_F text_stone_speed_area = { 200, 240, 600, 250 };
-		D2D1_RECT_F text_difficulty_speed_area = { 200, 360, 600, 370 };
-		pd2dDevicecontext->DrawTextW(text_player_speed.c_str(), (UINT32)wcslen(text_player_speed.c_str()), write_font_list[1], &text_player_speed_area, brush_list[0]);
-		pd2dDevicecontext->DrawTextW(text_stone_speed.c_str(), (UINT32)wcslen(text_stone_speed.c_str()), write_font_list[1], &text_stone_speed_area, brush_list[0]);
-		pd2dDevicecontext->DrawTextW(text_difficulty.c_str(), (UINT32)wcslen(text_difficulty.c_str()), write_font_list[1], &text_difficulty_speed_area, brush_list[0]);
-	}
+	
 
 }
 
 
 void Game_Scene::Check_Bullet_Collision()
 {
+	Bullet_Object* bullet_ptr = (Bullet_Object*)bullet_shader->m_ppObjects[0];
+	CGameObject* gravity_hole_obj = black_hole_shader->m_ppObjects[1];
+
 	XMFLOAT3 bullet_pos = { 0.0f,0.0f,0.0f };
-	if(bullet_shader->m_ppObjects[0]->active)
-		bullet_pos = bullet_shader->m_ppObjects[0]->GetPosition();
+	if (bullet_ptr->active)
+		bullet_pos = bullet_ptr->GetPosition();
+	else
+		return;
 
 	if (m_pTerrain)
 	{
 		float terrain_y = m_pTerrain->GetHeight(bullet_pos.x, bullet_pos.z);
 
-		if (abs(bullet_pos.y - terrain_y) < 1.0f)
+		if (abs(bullet_pos.y - terrain_y) < 5.0f)
 		{
-			black_hole_shader->m_ppObjects[1]->active = true;
-			bullet_shader->m_ppObjects[0]->active = false;
+			gravity_hole_obj->active = true;
+			bullet_ptr->active = false;
 
 			bullet_pos.y += 5.0f;
-			black_hole_shader->m_ppObjects[1]->SetPosition(bullet_pos);
+			gravity_hole_obj->SetPosition(bullet_pos);
+			Update_Time_Bar(100.0f);
 		}
+	}
+
+	for (CGameObject* box_ptr : box_shader->m_ppObjects)
+	{
+		if (!box_ptr->is_render) 
+			continue;
+
+		BoundingOrientedBox* box_obb = box_ptr->GetCollider();
+		if (bullet_ptr->GetCollider()->Intersects(*box_obb))
+		{
+			bullet_ptr->active = false;
+			gravity_hole_obj->active = true;
+			gravity_hole_obj->SetPosition(bullet_pos);
+			Update_Time_Bar(100.0f);
+			break;
+		}
+	}
+
+	// 총알의 생존 시간 만들어서, 3초 이상 살아있으면 그자리에 생성하기
+	// 총알 속도 빠르게 하기
+	if (bullet_ptr->active_time > 3.0f)
+	{
+		bullet_ptr->active = false;
+		bullet_ptr->active_time = false;
+
+		gravity_hole_obj->active = true;
+		gravity_hole_obj->SetPosition(bullet_pos);
+		Update_Time_Bar(100.0f);
 	}
 }
 
@@ -1414,8 +1511,8 @@ void Game_Scene::Collision_Defender(CPlayer* player_ptr, CObjectsShader* object_
 						XMVECTOR wallNormal = XMLoadFloat3(&polygon_normal_vector);
 						wallNormal = XMVector3Normalize(wallNormal); // 법선 벡터 정규화
 
-						// 회피 지점 계산: 충돌 지점 + (법선 벡터 * 회피 거리)
-						float avoidDistance = 20.0f; // 회피할 거리 (필요시 조정)
+						// 회피 지점 계산 = 충돌 지점 + (법선 벡터 * 회피 거리)
+						float avoidDistance = 20.0f; // 회피할 거리 
 						XMVECTOR collisionPoint = rayOrigin + rayDirection * f_distance;
 						XMVECTOR avoidTarget = collisionPoint + (wallNormal * avoidDistance);
 
@@ -1458,72 +1555,207 @@ void Game_Scene::Collision_Defender(CPlayer* player_ptr, CObjectsShader* object_
 	}
 }
 
+
 void Game_Scene::Check_Enemy_Collision()
 {
 	BoundingOrientedBox* player_light_obb = m_pPlayer->Get_Light_Collider();
 	BoundingOrientedBox* player_body_obb = m_pPlayer->GetCollider();
+	BoundingOrientedBox* bullet_obb = NULL;
+	
+	if (bullet_shader->m_ppObjects[0]->active)
+		bullet_obb = bullet_shader->m_ppObjects[0]->GetCollider();
 
 	for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects)
 	{
-		if (asteroid_ptr->active == false)
+		if (!asteroid_ptr->active) 
 			continue;
 
 		BoundingOrientedBox* asteroid_obb = asteroid_ptr->GetCollider();
+		bool isDestroyed = false;
 
+		// Wall 충돌 검사
 		for (CGameObject* box_ptr : box_shader->m_ppObjects)
 		{
-			if (box_ptr->is_render == false) // wall과는 충돌 무시
+			if (!box_ptr->is_render) 
 				continue;
 
 			BoundingOrientedBox* box_obb = box_ptr->GetCollider();
 			if (asteroid_obb->Intersects(*box_obb))
 			{
-				asteroid_ptr->active = false;
-				Add_Boom_Effect(asteroid_ptr->GetPosition());
+				isDestroyed = true;
 				break;
 			}
 		}
 
+		if (isDestroyed)
+		{
+			asteroid_ptr->active = false;
+			Add_Boom_Effect(asteroid_ptr->GetPosition());
+			DebugOutput("Boom!");
+			continue; // 다음 asteroid로 넘어감
+		}
+
+		// Player light 충돌 검사
 		if (asteroid_obb->Intersects(*player_light_obb))
 		{
-			if (((Asteroid*)asteroid_ptr)->life > 0)
-				((Asteroid*)asteroid_ptr)->life -= 1;
+			auto asteroid = static_cast<Asteroid*>(asteroid_ptr);
+			if (asteroid->life > 0)
+			{
+				asteroid->life -= 1;
+			}
 			else
 			{
 				asteroid_ptr->active = false;
-				Add_Boom_Effect(asteroid_ptr->GetPosition());
+				Update_Power_Bar(10.0f);
+				Add_Boom_Effect(asteroid_ptr->GetPosition(), true);
+				DebugOutput("Boom!");
 			}
+			continue; // 다음 asteroid로 넘어감
 		}
 
+		// Player body 충돌 검사
 		if (asteroid_obb->Intersects(*player_body_obb))
 		{
 			asteroid_ptr->active = false;
-			Add_Boom_Effect(asteroid_ptr->GetPosition(), true);
-			break;
+			Add_Boom_Effect(asteroid_ptr->GetPosition(), false);
+			DebugOutput("Boom!");
+			continue; // 다음 asteroid로 넘어감
+		}
+		
+		if (bullet_obb != NULL)
+		{
+			if (asteroid_obb->Intersects(*bullet_obb))
+			{
+				asteroid_ptr->active = false;
+				bullet_shader->m_ppObjects[0]->active = false;
+				Add_Boom_Effect(asteroid_ptr->GetPosition(), true);
+				DebugOutput("Boom!");
+			}
 		}
 	}
 }
+
 void Game_Scene::Check_Enemy_Black_Hole()
 {
+	if (black_hole_shader->Get_Player_Black_Hole()->active == false)
+		return;
+	
 	Black_Hole_Object* Gravity_black_hole = black_hole_shader->Get_Player_Black_Hole();
-	BoundingOrientedBox* Gravity_black_hole_obb = Gravity_black_hole->Gravity_area;
+	BoundingOrientedBox* Gravity_black_hole_obb = Gravity_black_hole->Get_Gravity_Collider();
 
 	for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects)
 	{
 		if (asteroid_ptr->active == false)
 			continue;
 
-		BoundingOrientedBox* asteroid_obb = asteroid_ptr->GetCollider();
+		auto asteroid = static_cast<Asteroid*>(asteroid_ptr);
 
-		if (Gravity_black_hole_obb->Intersects(*asteroid_obb))
+		BoundingOrientedBox* asteroid_obb = asteroid->GetCollider();
+
+		if (asteroid_obb->Intersects(*Gravity_black_hole_obb))
 		{
 			// 점점 빨려 들어가기
-		}
+			asteroid->SetTarget(Gravity_black_hole);
+			
+			float new_speed = asteroid->GetMovingSpeed() * 1.2f;
+			asteroid->SetMovingSpeed(new_speed);
 
+			asteroid->In_Gravity = true;
+
+			// 블랙홀 중심에 도달하면
+			if (asteroid_obb->Intersects(*Gravity_black_hole->GetCollider()))
+			{
+				asteroid_ptr->active = false;
+				Add_Boom_Effect(asteroid_ptr->GetPosition(), true);
+				DebugOutput("Boom!");
+			}
+		}
+		else
+		{
+			asteroid->SetTarget(m_pPlayer);
+			asteroid->In_Gravity = false;
+		}
 	}
 }
+
+void Game_Scene::Check_Enemy_Overlap() {
+	std::vector<CollisionInfo> collisions;
+
+	// 충돌 체크
+	for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects) {
+		if (!asteroid_ptr->active)
+			continue;
+
+		BoundingOrientedBox* asteroid_obb = asteroid_ptr->GetCollider();
+
+		for (CGameObject* other_asteroid_ptr : enemy_shader->m_ppObjects) {
+			if (other_asteroid_ptr == asteroid_ptr || !other_asteroid_ptr->active)
+				continue;
+
+			BoundingOrientedBox* other_asteroid_obb = other_asteroid_ptr->GetCollider();
+
+			// 두 OBB가 겹치는지 확인
+			if (asteroid_obb->Intersects(*other_asteroid_obb)) {
+				// 충돌 정보를 저장
+				collisions.push_back({ asteroid_ptr, other_asteroid_ptr });
+			}
+		}
+	}
+
+	// 충돌 처리
+	for (const CollisionInfo& collision : collisions) {
+		CGameObject* objA = collision.collided_obj_A;
+		CGameObject* objB = collision.collided_obj_B;
+
+		// 객체 A와 B의 진행 방향 가져오기
+		XMFLOAT3 dirA = objA->GetMovingDirection();
+		XMFLOAT3 dirB = objB->GetMovingDirection();
+
+		// 진행 방향을 반대 방향으로 설정하여 충돌을 피하게 함
+		XMFLOAT3 newDirA = { -dirA.x, -dirA.y, -dirA.z };
+		XMFLOAT3 newDirB = { -dirB.x, -dirB.y, -dirB.z };
+
+		// 새로운 방향 설정
+		objA->SetMovingDirection(newDirA);
+		objB->SetMovingDirection(newDirB);
+
+		// Optional: 두 객체의 위치를 살짝 변경하여 중첩되지 않도록 설정 (필요한 경우)
+		float offset = 0.1f; // 간격을 조정하여 객체가 겹치지 않도록 함
+		XMFLOAT3 posA = objA->GetPosition();
+		XMFLOAT3 posB = objB->GetPosition();
+		XMFLOAT3 separationVector = { posB.x - posA.x, posB.y - posA.y, posB.z - posA.z };
+		XMVECTOR separation = XMLoadFloat3(&separationVector);
+		separation = XMVector3Normalize(separation);
+
+		// 두 객체를 반대 방향으로 약간씩 이동
+		XMFLOAT3 adjustment;
+		XMStoreFloat3(&adjustment, separation * offset);
+		posA.x -= adjustment.x;
+		posA.y -= adjustment.y;
+		posA.z -= adjustment.z;
+		posB.x += adjustment.x;
+		posB.y += adjustment.y;
+		posB.z += adjustment.z;
+
+		// 새로운 위치 설정
+		objA->SetPosition(posA);
+		objB->SetPosition(posB);
+	}
+
+	// 충돌 정보 초기화 (다음 프레임을 위해)
+	collisions.clear();
+}
+
 void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos, bool color_change)
 {
+	if (color_change) // 플레이어가 터트린 경우
+	{
+		game_score += 100;
+	}
+	else // 플레이어가 맞은 경우
+		m_pPlayer->Life -= 1;
+	
+
 	bool Done = false; 
 	Sprite_Billboard_Shader* pshader = effect_shader;
 
@@ -1549,10 +1781,83 @@ void Game_Scene::Add_Boom_Effect(XMFLOAT3 exlposion_pos, bool color_change)
 	return;
 }
 
+void Game_Scene::Update_Power_Bar(float add_point)
+{
+	Screen_Rect* power_ptr = screen_shader->Power_Bar_ptr;
+
+	to_be_point += add_point;
+
+
+	if (to_be_point < 0.0f)
+		to_be_point = 0.0f;
+	else if (to_be_point > 100.0f)
+		to_be_point = 100.0f;
+
+	float lerp_speed = 0.05f; 
+	now_point = now_point + (to_be_point - now_point) * lerp_speed;
+
+
+	power_ptr->right_scale_move_value = now_point / 10.0f;
+
+	if (now_point >= 99.0f)
+		m_pPlayer->skill_charged = true;
+	else
+		m_pPlayer->skill_charged = false;
+}
+
+void Game_Scene::Update_Time_Bar(float add_point)
+{
+	Screen_Rect* time_ptr = screen_shader->Time_Bar_ptr;
+
+	to_be_time += add_point;
+
+
+	if (to_be_time < 0.0f)
+		to_be_time = 0.0f;
+	else if (to_be_time > 100.0f)
+		to_be_time = 100.0f;
+
+	float lerp_speed = 0.1f;
+	now_time = now_time + (to_be_time - now_time) * lerp_speed;
+
+
+	time_ptr->right_scale_move_value = now_time / 10.0f;
+
+	if (now_time >= 0.1f)
+		m_pPlayer->skill_cool_down = false;
+	else
+	{
+		m_pPlayer->skill_cool_down = true;
+		if (black_hole_shader->Get_Player_Black_Hole()->active == true)
+		{
+			for (CGameObject* asteroid_ptr : enemy_shader->m_ppObjects)
+				((Asteroid*)asteroid_ptr)->SetTarget(m_pPlayer);
+
+			black_hole_shader->Get_Player_Black_Hole()->active = false;
+		}
+	}
+	
+
+}
+
 void Game_Scene::Reset()
 {
 	m_pPlayer->SetPosition(XMFLOAT3(0.0f, 250.0f, 0.0f));
 	Show_Collider = false;
 	Pause_Mode = false;
 	Reset_Signal = false;
+
+	m_pPlayer->Life = 10;
+	m_pPlayer->skill_cool_down = false;
+	m_pPlayer->skill_charged = false;
+
+	game_score = 0;
+	to_be_point = 0.0f;
+	now_point = 0.0f;
+
+	gravity_hole_runtime = 0.0f;
+	to_be_time = 0.0f;
+	now_time = 0.0f;
+
+	enemy_shader->m_ppObjects.clear();
 }

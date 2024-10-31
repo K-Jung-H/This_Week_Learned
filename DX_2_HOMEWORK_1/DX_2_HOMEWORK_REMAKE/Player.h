@@ -40,6 +40,10 @@ protected:
 
 	
 public:
+	int Life = 10;
+	bool skill_charged = false;
+	bool skill_cool_down = false;
+public:
 	CPlayer();
 	virtual ~CPlayer();
 
@@ -90,6 +94,7 @@ public:
 	BoundingOrientedBox* Get_Light_Collider();
 	BoundingOrientedBox* Get_Navi_Collider();
 	
+	void Air_Balance();
 };
 
 class CAirplanePlayer : public CPlayer
@@ -108,6 +113,7 @@ private:
 public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 	virtual void OnPrepareRender();
+	
 };
 
 

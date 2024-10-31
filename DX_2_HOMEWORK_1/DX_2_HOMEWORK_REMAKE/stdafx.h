@@ -125,6 +125,7 @@ extern float Lerp(float a, float b, float t);
 extern float PLAYER_SPEED_VALUE;
 extern float STONE_SPEED_VALUE;
 extern int DIFFICULTY_VALUE;
+extern bool IS_MOUSE_DOWN;
 
 namespace Vector3
 {
